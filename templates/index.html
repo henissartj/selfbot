@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ACCÈS ROOT</title>
+    <style>
+        body {
+            background-color: #000000;
+            color: #e0e0e0;
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .shahada {
+            width: 100%;
+            text-align: center;
+            font-size: 1.5rem;
+            margin-bottom: 2rem;
+            color: #fff;
+            font-weight: bold;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 400px;
+            text-align: left;
+            margin-top: auto;
+            margin-bottom: auto;
+        }
+
+        h1 {
+            font-size: 1.2rem;
+            margin-bottom: 2rem;
+            font-weight: normal;
+            border-bottom: 1px solid #333;
+            padding-bottom: 10px;
+            letter-spacing: -1px;
+        }
+
+        form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        label {
+            font-size: 0.8rem;
+            color: #666;
+            margin-bottom: -10px;
+        }
+
+        input[type="password"] {
+            background-color: #000;
+            border: 1px solid #333;
+            color: #fff;
+            padding: 15px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 1rem;
+            width: 100%;
+            box-sizing: border-box;
+            border-radius: 0;
+            outline: none;
+        }
+
+        input[type="password"]:focus {
+            border-color: #666;
+        }
+
+        button {
+            background-color: #111;
+            color: #fff;
+            border: 1px solid #333;
+            padding: 15px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.9rem;
+            cursor: pointer;
+            text-transform: uppercase;
+            width: 100%;
+            border-radius: 0;
+            transition: all 0.2s;
+        }
+
+        button:hover {
+            background-color: #fff;
+            color: #000;
+        }
+
+        .footer-logo {
+            margin-top: auto;
+            text-align: center;
+            width: 100%;
+            padding-top: 2rem;
+        }
+
+        .footer-logo img {
+            max-width: 150px;
+            filter: grayscale(100%) contrast(120%);
+            opacity: 0.7;
+        }
+
+        .credits {
+            margin-top: 15px;
+            font-size: 0.7rem;
+            color: #444;
+            text-transform: uppercase;
+        }
+        
+        .credits span {
+            color: #888;
+            font-weight: bold;
+        }
+
+        .emprise-link {
+            display: block;
+            margin-top: 10px;
+            color: #444;
+            text-decoration: none;
+            font-size: 0.7rem;
+            transition: color 0.2s;
+        }
+
+        .emprise-link:hover {
+            color: #fff;
+            text-decoration: underline;
+        }
+
+        /* Mobile adjustments */
+        @media (max-width: 480px) {
+            h1 { font-size: 1rem; }
+            input, button { font-size: 1rem; padding: 12px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="shahada">لَا إِلَٰهَ إِلَّا ٱللَّٰهُ مُحَمَّدٌ رَسُولُ ٱللَّٰهِ</div>
+
+    <div class="container">
+        <h1>> AUTHENTIFICATION REQUISE</h1>
+        <form method="POST">
+            <label>TOKEN :</label>
+            <input type="password" name="token" autofocus required>
+            <button type="submit">EXÉCUTER</button>
+        </form>
+    </div>
+        
+    <div class="footer-logo">
+        <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Logo">
+        <div class="credits">CORE :: <span>L'EMPRISE</span> // <span>FAZER</span></div>
+        <a href="https://www.emprise.world/" target="_blank" class="emprise-link">ACCÉDER À L'EMPRISE</a>
+    </div>
+</body>
+</html>
