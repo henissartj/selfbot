@@ -10,6 +10,7 @@ import discord
 from discord.ext import commands
 import random
 import string
+import aiohttp
 
 def ask_token():
     import sys
@@ -256,58 +257,99 @@ async def antiraid(ctx, setting: str = None, value: str = None):
         await ctx.send("Usage: .antiraid <module> <on/off>", delete_after=5)
 
 @bot.command()
-async def help(ctx):
+async def help(ctx, category: str = None):
     await ctx.message.delete()
-    help_text = """
-```ini
-[ 🛠️ GÉNÉRAL / UTILE ]
-.ping        - Pong! Vérifie la latence
-.tokeninfo   - Affiche les infos du token actuel
-.guildicon   - Affiche l'icône du serveur
-.firstmessage - Lien vers le premier message du salon
-.dhikr       - Envoie un rappel / phrase de dhikr
+    
+    categories = {
+        "general": {
+            "icon": "🛠️",
+            "title": "GÉNÉRAL / UTILE",
+            "commands": [
+                ".ping - Pong! Vérifie la latence",
+                ".tokeninfo - Affiche les infos du token",
+                ".guildicon - Affiche l'icône du serveur",
+                ".firstmessage - Lien vers le premier message",
+                ".dhikr - Envoie un rappel de dhikr",
+                ".clearmydms - Supprime vos messages MP"
+            ]
+        },
+        "raid": {
+            "icon": "☣️",
+            "title": "RAID / DESTRUCTION",
+            "commands": [
+                ".nuke - Détruit le serveur",
+                ".raid <n> <msg> - Mass ping + suppression",
+                ".spam <n> <msg> - Spam message",
+                ".spamid <id> <n> <msg> - Spam MP par ID",
+                ".spamall <n> <msg> - Spam MP tous membres",
+                ".massdm <msg> - MP unique à tous",
+                ".webhookspam <url> <n> <msg> - Spam webhook",
+                ".everyone <n> <msg> - Spam @everyone",
+                ".here <n> <msg> - Spam @here",
+                ".scramble - Renomme salons aléatoirement",
+                ".autoguild <nom> <n> - Crée serveurs"
+            ]
+        },
+        "antiraid": {
+            "icon": "🛡️",
+            "title": "ANTI-RAID",
+            "commands": [
+                ".antiraid - Configure les modules",
+                ".whitelist <user> - Protège un utilisateur",
+                ".unwhitelist <user> - Retire la protection"
+            ]
+        },
+        "moderation": {
+            "icon": "🧹",
+            "title": "MODÉRATION / NETTOYAGE",
+            "commands": [
+                ".purge <n> - Supprime les messages",
+                ".delall - Supprime vos messages",
+                ".deluser <user> - Supprime messages d'un user",
+                ".cleardm <id> - Supprime les MPs avec un user"
+            ]
+        },
+        "troll": {
+            "icon": "🤡",
+            "title": "TROLL / FUN",
+            "commands": [
+                ".ghostping <n> <user> - Mentions fantômes",
+                ".reactspam <id> <emoji> <n> - Spam réactions",
+                ".nickspam <n> - Change pseudo en boucle",
+                ".statusspam <n> <txt> - Change statut en boucle",
+                ".massreact <n> <emoji> - Réagit aux messages récents",
+                ".stealall - Vole tous les emojis"
+            ]
+        },
+        "advanced": {
+            "icon": "🔧",
+            "title": "AVANCÉ",
+            "commands": [
+                ".copyguild <id> - Clone l'architecture",
+                ".dmhistory <id> <n> - Historique MP",
+                ".bypassverify <inv> - Bypass vérification",
+                ".tokencheck - Vérifie la validité du token"
+            ]
+        }
+    }
 
-[ ☣️ RAID / DESTRUCTION ]
-.nuke        - Supprime tout (salons/rôles) et recrée la base
-.raid <n> <msg> - Mass ping + suppression des salons
-.spam <n> <msg> - Spam un message dans le salon
-.spamid <id> <n> <msg> - Spam un utilisateur en MP par ID
-.spamall <n> <msg> - Spam tous les membres du serveur en MP
-.massdm <msg> - Envoie un MP unique à tout le monde
-.webhookspam <url> <n> <msg> - Spam via un webhook
-.everyone <n> <msg> - Spam @everyone
-.here <n> <msg> - Spam @here
-.scramble    - Renomme les salons aléatoirement
-.autoguild <nom> <n> - Crée des serveurs en masse
-
-[ 🛡️ ANTI-RAID ]
-.antiraid    - Affiche ou configure les modules (on/off)
-.whitelist <user> - Protège un utilisateur des sanctions
-.unwhitelist <user> - Retire la protection d'un utilisateur
-
-[ 🧹 MODÉRATION / NETTOYAGE ]
-.purge <n>   - Supprime les n derniers messages
-.delall      - Supprime tous VOS messages dans le salon
-.deluser <user> - Supprime les messages d'un utilisateur
-.cleardm <id> - Supprime les MPs avec un utilisateur
-.clearmydms  - Supprime vos messages dans TOUS vos MPs
-
-[ 🤡 TROLL / FUN ]
-.ghostping <n> <user> - Mentions fantômes
-.reactspam <id> <emoji> <n> - Spam réactions sur un message
-.nickspam <n> - Change votre pseudo en boucle
-.statusspam <n> <txt> - Change votre statut en boucle
-.massreact <n> <emoji> - Réagit aux messages récents
-.stealall    - Vole tous les emojis du serveur
-
-[ 🔧 AVANCÉ ]
-.copyguild <id> - Clone l'architecture d'un serveur
-.dmhistory <id> <n> - Affiche l'historique MP avec un user
-.bypassverify <inv> - Tente de bypass la vérification
-.tokencheck  - Vérifie la validité du token
-```
-    """
-    await ctx.send(help_text)
+    if not category:
+        help_text = "```ini\n[ MENU D'AIDE - SELF-BOT ]\n\n"
+        for key, data in categories.items():
+            help_text += f"[{data['icon']} {data['title']}]\nCommande : .help {key}\n\n"
+        help_text += "Exemple : .help raid\n```"
+        await ctx.send(help_text)
+    else:
+        cat = category.lower()
+        if cat in categories:
+            data = categories[cat]
+            help_text = f"```ini\n[ {data['icon']} {data['title']} ]\n\n"
+            for cmd in data['commands']:
+                help_text += f"{cmd}\n"
+            help_text += "```"
+            await ctx.send(help_text)
+        else:
+            await ctx.send(f"Catégorie introuvable. Faites .help pour la liste.", delete_after=5)
 
 @bot.command()
 async def ping(ctx):

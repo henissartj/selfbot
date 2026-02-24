@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='bouton.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <!-- Discord Embed / Open Graph Meta Tags -->
@@ -14,276 +16,6 @@
     <meta name="theme-color" content="#5865F2">
 
     <title>C2 // PANNEAU</title>
-    <style>
-        body {
-            background-color: #36393f;
-            color: #dcddde;
-            font-family: 'gg sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            min-height: 100vh;
-            margin: 0;
-            padding: 20px;
-            box-sizing: border-box;
-        }
-
-        .shahada-container {
-            width: 100%;
-            text-align: center;
-            margin-top: 80px; /* Encore plus bas */
-            margin-bottom: 3rem;
-        }
-
-        .shahada {
-            font-size: 2rem;
-            color: #fff;
-            font-weight: bold;
-            display: inline-block;
-            animation: glow 3s ease-in-out infinite alternate;
-        }
-
-        @keyframes glow {
-            from {
-                text-shadow: 0 0 5px #fff, 0 0 10px #fff;
-                opacity: 0.8;
-            }
-            to {
-                text-shadow: 0 0 20px #fff, 0 0 30px #ffd700;
-                opacity: 1;
-            }
-        }
-
-        .container {
-            width: 100%;
-            max-width: 500px;
-            background-color: #2f3136;
-            padding: 30px;
-            border-radius: 5px;
-            box-shadow: 0 2px 10px 0 rgba(0,0,0,0.2);
-            text-align: center;
-            margin-bottom: auto;
-        }
-
-        h1 {
-            font-size: 1.5rem;
-            margin-bottom: 20px;
-            color: #fff;
-            font-weight: 600;
-            border-bottom: none;
-            padding-bottom: 0;
-            letter-spacing: normal;
-        }
-
-        .status-box {
-            background: #202225;
-            border: none;
-            padding: 20px;
-            margin-bottom: 30px;
-            border-radius: 5px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .status-label {
-            font-size: 0.9rem;
-            color: #b9bbbe;
-            font-weight: 600;
-            text-transform: uppercase;
-        }
-
-        .status-value {
-            font-size: 1rem;
-            font-weight: bold;
-            padding: 5px 10px;
-            border-radius: 3px;
-        }
-
-        .running { color: #3ba55c; background: rgba(59, 165, 92, 0.1); }
-        .stopped { color: #ed4245; background: rgba(237, 66, 69, 0.1); }
-
-        .actions {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-            margin-bottom: 30px;
-        }
-
-        form {
-            width: 100%;
-        }
-
-        button {
-            border: none;
-            color: #fff;
-            padding: 15px;
-            font-family: inherit;
-            font-size: 1rem;
-            cursor: pointer;
-            text-transform: none;
-            width: 100%;
-            height: 100%;
-            border-radius: 5px;
-            transition: background-color 0.2s;
-            font-weight: 600;
-        }
-
-        .btn-start {
-            background-color: #3ba55c;
-        }
-        
-        .btn-start:hover:not(:disabled) {
-            background-color: #2d7d46;
-        }
-
-        .btn-stop {
-            background-color: #ed4245;
-        }
-
-        .btn-stop:hover:not(:disabled) {
-            background-color: #c03537;
-        }
-
-        button:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            background-color: #4f545c;
-        }
-
-        .logout-container {
-            text-align: center;
-            margin-top: 10px;
-        }
-
-        .btn-logout {
-            background: transparent;
-            border: none;
-            color: #ed4245;
-            font-size: 0.9rem;
-            padding: 10px;
-            text-decoration: none;
-            font-weight: 500;
-        }
-        
-        .btn-logout:hover {
-            background: transparent;
-            text-decoration: underline;
-            color: #c03537;
-        }
-
-        .footer-logo {
-            margin-top: auto;
-            text-align: center;
-            width: 100%;
-            padding-top: 40px;
-        }
-
-        .footer-logo img {
-            max-width: 120px;
-            filter: grayscale(100%) brightness(0.7);
-            opacity: 0.5;
-            transition: all 0.3s;
-        }
-        
-        .footer-logo:hover img {
-            filter: none;
-            opacity: 1;
-        }
-
-        .credits {
-            margin-top: 10px;
-            font-size: 0.7rem;
-            color: #72767d;
-        }
-        
-        .credits span {
-            color: #dcddde;
-            font-weight: bold;
-        }
-
-        .emprise-link {
-            display: block;
-            margin-top: 5px;
-            color: #72767d;
-            text-decoration: none;
-            font-size: 0.7rem;
-            transition: color 0.2s;
-        }
-
-        .emprise-link:hover {
-            color: #dcddde;
-            text-decoration: underline;
-        }
-
-        .user-profile {
-            display: flex;
-            align-items: center;
-            background: #202225;
-            border: none;
-            padding: 15px;
-            margin-bottom: 30px;
-            position: relative;
-            overflow: hidden;
-            border-radius: 5px;
-        }
-
-        .user-banner {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-size: cover;
-            background-position: center;
-            opacity: 0.3;
-            z-index: 0;
-        }
-
-        .user-avatar {
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            border: 3px solid #202225;
-            margin-right: 15px;
-            z-index: 1;
-            position: relative;
-        }
-
-        .user-info {
-            z-index: 1;
-            position: relative;
-            text-align: left;
-        }
-
-        .user-name {
-            font-size: 1.1rem;
-            font-weight: bold;
-            color: #fff;
-            display: block;
-        }
-
-        .user-status {
-            font-size: 0.75rem;
-            color: #3ba55c;
-            margin-top: 2px;
-            display: block;
-            text-transform: uppercase;
-            font-weight: 600;
-        }
-
-        /* Mobile adjustments */
-        @media (max-width: 480px) {
-            body { padding: 10px; }
-            .shahada-container { margin-top: 40px; }
-            .container { padding: 20px; max-width: 100%; }
-            .shahada { font-size: 1.2rem; }
-            .actions { grid-template-columns: 1fr; }
-            button { padding: 15px; }
-            .user-profile { padding: 10px; }
-            .user-avatar { width: 50px; height: 50px; }
-        }
-    </style>
 </head>
 <body>
     <div class="shahada-container">
@@ -320,17 +52,72 @@
         </div>
 
         <div class="actions">
-            <form action="/start" method="POST">
-                <button type="submit" class="btn-start" {{ 'disabled' if is_running }}>ACTIVER</button>
-            </form>
-            
-            <form action="/stop" method="POST">
-                <button type="submit" class="btn-stop" {{ 'disabled' if not is_running }}>DÉSACTIVER</button>
-            </form>
+            <div class="toggle-container">
+              <div class="toggle-wrap">
+                <input class="toggle-input" id="holo-toggle" type="checkbox" {{ 'checked' if is_running else '' }} />
+                <label class="toggle-track" for="holo-toggle">
+                  <div class="track-lines">
+                    <div class="track-line"></div>
+                  </div>
+
+                  <div class="toggle-thumb">
+                    <div class="thumb-core"></div>
+                    <div class="thumb-inner"></div>
+                    <div class="thumb-scan"></div>
+                    <div class="thumb-particles">
+                      <div class="thumb-particle"></div>
+                      <div class="thumb-particle"></div>
+                      <div class="thumb-particle"></div>
+                      <div class="thumb-particle"></div>
+                      <div class="thumb-particle"></div>
+                    </div>
+                  </div>
+
+                  <div class="toggle-data">
+                    <div class="data-text off">OFF</div>
+                    <div class="data-text on">ON</div>
+                    <div class="status-indicator off"></div>
+                    <div class="status-indicator on"></div>
+                  </div>
+
+                  <div class="energy-rings">
+                    <div class="energy-ring"></div>
+                    <div class="energy-ring"></div>
+                    <div class="energy-ring"></div>
+                  </div>
+
+                  <div class="interface-lines">
+                    <div class="interface-line"></div>
+                    <div class="interface-line"></div>
+                    <div class="interface-line"></div>
+                    <div class="interface-line"></div>
+                    <div class="interface-line"></div>
+                    <div class="interface-line"></div>
+                  </div>
+
+                  <div class="toggle-reflection"></div>
+                  <div class="holo-glow"></div>
+                </label>
+              </div>
+            </div>
+
+            <script>
+                document.getElementById('holo-toggle').addEventListener('change', function() {
+                    const action = this.checked ? '/start' : '/stop';
+                    this.disabled = true;
+                    fetch(action, { method: 'POST' })
+                        .then(() => window.location.reload())
+                        .catch(err => {
+                            console.error(err);
+                            this.disabled = false;
+                            alert('Erreur lors du changement d\'état.');
+                        });
+                });
+            </script>
         </div>
 
         <div class="logout-container">
-            <a href="/logout"><button class="btn-logout">SE DÉCONNECTER</button></a>
+            <a href="/logout" class="btn-logout">SE DÉCONNECTER</a>
         </div>
     </div>
 

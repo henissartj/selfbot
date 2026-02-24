@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     
     <!-- Discord Embed / Open Graph Meta Tags -->
@@ -14,174 +15,6 @@
     <meta name="theme-color" content="#5865F2">
     
     <title>ACCÈS ROOT</title>
-    <style>
-        body {
-            background-color: #36393f;
-            color: #dcddde;
-            font-family: 'gg sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            min-height: 100vh;
-            margin: 0;
-            padding: 20px;
-            box-sizing: border-box;
-        }
-
-        .shahada-container {
-            width: 100%;
-            text-align: center;
-            margin-top: 80px; /* Encore plus bas */
-            margin-bottom: 3rem;
-        }
-
-        .shahada {
-            font-size: 2rem;
-            color: #fff;
-            font-weight: bold;
-            display: inline-block;
-            animation: glow 3s ease-in-out infinite alternate;
-        }
-
-        @keyframes glow {
-            from {
-                text-shadow: 0 0 5px #fff, 0 0 10px #fff;
-                opacity: 0.8;
-            }
-            to {
-                text-shadow: 0 0 20px #fff, 0 0 30px #ffd700;
-                opacity: 1;
-            }
-        }
-
-        .container {
-            width: 100%;
-            max-width: 400px;
-            background-color: #2f3136;
-            padding: 30px;
-            border-radius: 5px;
-            box-shadow: 0 2px 10px 0 rgba(0,0,0,0.2);
-            text-align: center;
-            margin-bottom: auto;
-        }
-
-        h1 {
-            font-size: 1.5rem;
-            margin-bottom: 20px;
-            color: #fff;
-            font-weight: 600;
-            border-bottom: none;
-            padding-bottom: 0;
-            letter-spacing: normal;
-        }
-
-        form {
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-            text-align: left;
-        }
-
-        label {
-            font-size: 0.75rem;
-            color: #b9bbbe;
-            text-transform: uppercase;
-            font-weight: bold;
-            margin-bottom: -10px;
-        }
-
-        input[type="password"] {
-            background-color: #202225;
-            border: 1px solid #202225;
-            color: #dcddde;
-            padding: 10px;
-            font-family: inherit;
-            font-size: 1rem;
-            width: 100%;
-            box-sizing: border-box;
-            border-radius: 3px;
-            outline: none;
-            transition: border-color 0.2s;
-            height: 40px;
-        }
-
-        input[type="password"]:focus {
-            border-color: #5865F2;
-        }
-
-        button {
-            background-color: #5865F2;
-            color: #fff;
-            border: none;
-            padding: 2px 16px;
-            font-family: inherit;
-            font-size: 1rem;
-            cursor: pointer;
-            text-transform: none;
-            width: 100%;
-            border-radius: 3px;
-            transition: background-color 0.2s;
-            height: 44px;
-            font-weight: 500;
-        }
-
-        button:hover {
-            background-color: #4752c4;
-            color: #fff;
-        }
-
-        .footer-logo {
-            margin-top: auto;
-            text-align: center;
-            width: 100%;
-            padding-top: 2rem;
-        }
-
-        .footer-logo img {
-            max-width: 120px;
-            filter: grayscale(100%) brightness(0.7);
-            opacity: 0.5;
-            transition: all 0.3s;
-        }
-        
-        .footer-logo:hover img {
-            filter: none;
-            opacity: 1;
-        }
-
-        .credits {
-            margin-top: 10px;
-            font-size: 0.7rem;
-            color: #72767d;
-        }
-        
-        .credits span {
-            color: #dcddde;
-            font-weight: bold;
-        }
-
-        .emprise-link {
-            display: block;
-            margin-top: 5px;
-            color: #72767d;
-            text-decoration: none;
-            font-size: 0.7rem;
-            transition: color 0.2s;
-        }
-
-        .emprise-link:hover {
-            color: #dcddde;
-            text-decoration: underline;
-        }
-
-        /* Mobile adjustments */
-        @media (max-width: 480px) {
-            body { padding: 10px; }
-            .shahada-container { margin-top: 40px; }
-            .container { padding: 20px; max-width: 100%; }
-            .shahada { font-size: 1.2rem; }
-        }
-    </style>
 </head>
 <body>
     <div class="shahada-container">
@@ -190,7 +23,7 @@
 
     <div class="container">
         {% if error %}
-        <div style="color: red; margin-bottom: 10px; font-size: 0.8rem; text-align: center;">> ERREUR: {{ error }}</div>
+        <div style="color: #ff4d4d; margin-bottom: 20px; font-size: 0.9rem; text-align: center; text-shadow: 0 0 10px rgba(255, 77, 77, 0.5);">> ERREUR: {{ error }}</div>
         {% endif %}
 
         {% if step == 'password' %}

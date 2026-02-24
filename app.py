@@ -123,7 +123,7 @@ def stop_bot():
     global BOT_PROCESS
     if BOT_PROCESS and BOT_PROCESS.is_alive():
         BOT_PROCESS.terminate()
-        BOT_PROCESS.join(timeout=2)
+        BOT_PROCESS.join(timeout=0.1)
         if BOT_PROCESS.is_alive():
             BOT_PROCESS.kill()
             BOT_PROCESS.join()
