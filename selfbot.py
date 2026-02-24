@@ -258,44 +258,56 @@ async def antiraid(ctx, setting: str = None, value: str = None):
 @bot.command()
 async def help(ctx):
     await ctx.message.delete()
-    cmds = (
-        ".help – Affiche ce message\n"
-        ".ping – Pong!\n"
-        ".nuke – Supprime tous les salons et rôles, recrée des salons basiques\n"
-        ".spam <amount> <message> – Spam le message amount fois\n"
-        ".spamid <user_id> <amount> <message> – Spam en MP l’ID\n"
-        ".spamall <amount> <message> – Spam tous les membres du serveur en MP\n"
-        ".raid <amount> <message> – Mass ping + suppression des salons\n"
-        ".massdm <message> – Envoie un MP à tous les membres du serveur\n"
-        ".purge <amount> – Supprime les amount derniers messages\n"
-        ".webhookspam <url> <amount> <message> – Spam via webhook\n"
-        ".cleardm <user_id> – Supprime les MPs avec cet utilisateur\n"
-        ".firstmessage – Lien vers le premier message du salon\n"
-        ".guildicon – Icône du serveur\n"
-        ".delall – Supprime tous vos messages du salon\n"
-        ".deluser <user> – Supprime les messages d'un utilisateur\n"
-        ".ghostping <amount> <user> – Mentions fantômes\n"
-        ".everyone <amount> <message> – Spam @everyone\n"
-        ".here <amount> <message> – Spam @here\n"
-        ".reactspam <msg_id> <emoji> <amount> – Spam réactions\n"
-        ".nickspam <amount> – Change le pseudo en boucle\n"
-        ".statusspam <amount> <text> – Change le statut en boucle\n"
-        ".tokeninfo – Infos du token\n"
-        ".copyguild <guild_id> – Clone un serveur\n"
-        ".stealall – Vole tous les emojis\n"
-        ".scramble – Renomme les salons aléatoirement\n"
-        ".dmhistory <user_id> <limit> – Historique MP\n"
-        ".clearmydms – Supprime vos messages dans tous les MPs\n"
-        ".bypassverify <invite> – Bypass vérification\n"
-        ".massreact <amount> <emoji> – Réagit aux messages récents\n"
-        ".tokencheck – Vérifie la validité du token\n"
-        ".autoguild <name> <amount> – Crée des serveurs\n"
-        ".dhikr – Envoie une phrase de dhikr\n"
-        ".antiraid [module] [on/off] – Gestion des modules anti-raid\n"
-        ".whitelist <user> – Ajoute un utilisateur à la whitelist\n"
-        ".unwhitelist <user> – Retire un utilisateur de la whitelist"
-    )
-    await ctx.send(f"```\n{cmds}\n```")
+    help_text = """
+```ini
+[ 🛠️ GÉNÉRAL / UTILE ]
+.ping        - Pong! Vérifie la latence
+.tokeninfo   - Affiche les infos du token actuel
+.guildicon   - Affiche l'icône du serveur
+.firstmessage - Lien vers le premier message du salon
+.dhikr       - Envoie un rappel / phrase de dhikr
+
+[ ☣️ RAID / DESTRUCTION ]
+.nuke        - Supprime tout (salons/rôles) et recrée la base
+.raid <n> <msg> - Mass ping + suppression des salons
+.spam <n> <msg> - Spam un message dans le salon
+.spamid <id> <n> <msg> - Spam un utilisateur en MP par ID
+.spamall <n> <msg> - Spam tous les membres du serveur en MP
+.massdm <msg> - Envoie un MP unique à tout le monde
+.webhookspam <url> <n> <msg> - Spam via un webhook
+.everyone <n> <msg> - Spam @everyone
+.here <n> <msg> - Spam @here
+.scramble    - Renomme les salons aléatoirement
+.autoguild <nom> <n> - Crée des serveurs en masse
+
+[ 🛡️ ANTI-RAID ]
+.antiraid    - Affiche ou configure les modules (on/off)
+.whitelist <user> - Protège un utilisateur des sanctions
+.unwhitelist <user> - Retire la protection d'un utilisateur
+
+[ 🧹 MODÉRATION / NETTOYAGE ]
+.purge <n>   - Supprime les n derniers messages
+.delall      - Supprime tous VOS messages dans le salon
+.deluser <user> - Supprime les messages d'un utilisateur
+.cleardm <id> - Supprime les MPs avec un utilisateur
+.clearmydms  - Supprime vos messages dans TOUS vos MPs
+
+[ 🤡 TROLL / FUN ]
+.ghostping <n> <user> - Mentions fantômes
+.reactspam <id> <emoji> <n> - Spam réactions sur un message
+.nickspam <n> - Change votre pseudo en boucle
+.statusspam <n> <txt> - Change votre statut en boucle
+.massreact <n> <emoji> - Réagit aux messages récents
+.stealall    - Vole tous les emojis du serveur
+
+[ 🔧 AVANCÉ ]
+.copyguild <id> - Clone l'architecture d'un serveur
+.dmhistory <id> <n> - Affiche l'historique MP avec un user
+.bypassverify <inv> - Tente de bypass la vérification
+.tokencheck  - Vérifie la validité du token
+```
+    """
+    await ctx.send(help_text)
 
 @bot.command()
 async def ping(ctx):
