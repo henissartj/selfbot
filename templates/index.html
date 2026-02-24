@@ -143,12 +143,25 @@
     <div class="shahada">لَا إِلَٰهَ إِلَّا ٱللَّٰهُ مُحَمَّدٌ رَسُولُ ٱللَّٰهِ</div>
 
     <div class="container">
-        <h1>> AUTHENTIFICATION REQUISE</h1>
+        {% if error %}
+        <div style="color: red; margin-bottom: 10px; font-size: 0.8rem; text-align: center;">> ERREUR: {{ error }}</div>
+        {% endif %}
+
+        {% if step == 'password' %}
+        <h1>> ACCÈS SÉCURISÉ</h1>
         <form method="POST">
-            <label>TOKEN :</label>
-            <input type="password" name="token" autofocus required>
-            <button type="submit">EXÉCUTER</button>
+            <label>MOT DE PASSE DU SITE :</label>
+            <input type="password" name="password" autofocus required placeholder="Entrez le mot de passe">
+            <button type="submit">VERIFIER</button>
         </form>
+        {% else %}
+        <h1>> AUTHENTIFICATION DISCORD</h1>
+        <form method="POST">
+            <label>TOKEN DISCORD :</label>
+            <input type="password" name="token" autofocus required placeholder="Entrez votre token">
+            <button type="submit">CONNEXION</button>
+        </form>
+        {% endif %}
     </div>
         
     <div class="footer-logo">

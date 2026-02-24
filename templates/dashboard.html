@@ -172,6 +172,69 @@
             .actions { grid-template-columns: 1fr; }
             button { padding: 25px; font-size: 1rem; } /* Larger touch targets */
         }
+        .user-profile {
+            display: flex;
+            align-items: center;
+            background: #0a0a0a;
+            border: 1px solid #333;
+            padding: 15px;
+            margin-bottom: 30px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .user-banner {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-size: cover;
+            background-position: center;
+            opacity: 0.2;
+            z-index: 0;
+        }
+
+        .user-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: 2px solid #333;
+            margin-right: 15px;
+            z-index: 1;
+            position: relative;
+        }
+
+        .user-info {
+            z-index: 1;
+            position: relative;
+        }
+
+        .user-name {
+            font-size: 1rem;
+            font-weight: bold;
+            color: #fff;
+            display: block;
+        }
+
+        .user-status {
+            font-size: 0.7rem;
+            color: #00ff00; /* Green text as requested */
+            margin-top: 5px;
+            display: block;
+            text-transform: uppercase;
+        }
+
+        /* Mobile adjustments */
+        @media (max-width: 480px) {
+            .container { margin-top: 10px; }
+            .actions { grid-template-columns: 1fr; }
+            button { padding: 25px; font-size: 1rem; } /* Larger touch targets */
+            .user-profile { padding: 10px; }
+            .user-avatar { width: 40px; height: 40px; }
+            .user-name { font-size: 0.9rem; }
+            .user-status { font-size: 0.6rem; }
+        }
     </style>
 </head>
 <body>
@@ -180,6 +243,25 @@
     <div class="container">
         <h1>> PANNEAU DE CONTRÔLE</h1>
         
+        {% if user %}
+        <div class="user-profile">
+            {% if user.banner %}
+            <div class="user-banner" style="background-image: url('https://cdn.discordapp.com/banners/{{ user.id }}/{{ user.banner }}.png?size=300');"></div>
+            {% endif %}
+            
+            {% if user.avatar %}
+            <img src="https://cdn.discordapp.com/avatars/{{ user.id }}/{{ user.avatar }}.png" alt="Avatar" class="user-avatar">
+            {% else %}
+            <div class="user-avatar" style="background-color: #333;"></div>
+            {% endif %}
+            
+            <div class="user-info">
+                <span class="user-name">{{ user.username }}#{{ user.discriminator }}</span>
+                <span class="user-status">CONNECTÉ EN TANT QUE {{ user.username }}</span>
+            </div>
+        </div>
+        {% endif %}
+
         <div class="status-box">
             <span class="status-label">ÉTAT :</span>
             <span class="status-value {{ 'running' if is_running else 'stopped' }}">
