@@ -159,12 +159,13 @@ button:hover {
     text-shadow: 0 0 5px var(--accent-cyan);
 }
 
-.actions {
+.actions-center {
     display: flex;
     justify-content: center;
     align-items: center;
-    margin: 30px 0;
+    margin: 30px auto;
     width: 100%;
+    text-align: center;
 }
 
 /* Toggle Switch - Holo Style */

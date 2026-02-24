@@ -337,7 +337,7 @@ async def help(ctx, category: str = None):
         help_text = "```ini\n[ MENU D'AIDE - SELF-BOT ]\n\n"
         for key, data in categories.items():
             help_text += f"[{data['icon']} {data['title']}]\nCommande : .help {key}\n\n"
-        help_text += "Exemple : .help raid\n```"
+        help_text += "```"
         await ctx.send(help_text)
     else:
         cat = category.lower()
