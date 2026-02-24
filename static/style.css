@@ -93,6 +93,157 @@ h1 {
     text-shadow: 0 0 10px rgba(0, 255, 150, 0.3);
 }
 
+/* Login Layout with Sidebar */
+.login-layout {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+    text-align: left;
+}
+
+.profiles-sidebar {
+    flex: 0 0 200px; /* Narrow sidebar */
+    border-right: 1px solid var(--glass-border);
+    padding-right: 15px;
+    max-height: 350px;
+    overflow-y: auto;
+    /* Custom scrollbar */
+    scrollbar-width: thin;
+    scrollbar-color: var(--accent-cyan) rgba(0,0,0,0.3);
+}
+
+.profiles-sidebar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.profiles-sidebar::-webkit-scrollbar-thumb {
+    background-color: var(--accent-cyan);
+    border-radius: 3px;
+}
+
+.login-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding-left: 10px;
+}
+
+/* Compact Profile List */
+.profiles-list h2 {
+    font-size: 1rem;
+    margin-bottom: 15px;
+    text-align: left;
+    color: var(--text-dim);
+}
+
+.profiles-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 0;
+    max-height: none; /* Controlled by sidebar */
+    overflow-y: visible;
+    padding-right: 0;
+}
+
+.profile-card {
+    background: rgba(0, 10, 20, 0.4);
+    border: 1px solid var(--glass-border);
+    border-radius: 6px;
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: all 0.2s ease;
+}
+
+.profile-card:hover {
+    background: rgba(0, 30, 60, 0.6);
+    border-color: var(--accent-cyan);
+    transform: translateX(2px);
+}
+
+.profile-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    overflow: hidden;
+}
+
+.profile-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 1px solid var(--accent-cyan);
+}
+
+.profile-name {
+    font-weight: 500;
+    color: var(--text-main);
+    font-size: 0.85rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 90px;
+}
+
+.profile-actions {
+    display: flex;
+    gap: 5px;
+}
+
+.btn-select {
+    background: var(--accent-blue);
+    color: white;
+    border: none;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+
+.btn-select:hover {
+    background: #0040cc;
+}
+
+.btn-delete {
+    background: rgba(255, 50, 50, 0.2);
+    color: #ff4d4d;
+    border: 1px solid #ff4d4d;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.btn-delete:hover {
+    background: rgba(255, 50, 50, 0.4);
+}
+
+/* Responsive adjustments */
+@media (max-width: 700px) {
+    .login-layout {
+        flex-direction: column;
+    }
+    .profiles-sidebar {
+        flex: none;
+        width: 100%;
+        border-right: none;
+        border-bottom: 1px solid var(--glass-border);
+        padding-right: 0;
+        padding-bottom: 20px;
+        margin-bottom: 20px;
+        max-height: 200px;
+    }
+    .login-main {
+        padding-left: 0;
+        width: 100%;
+    }
+}
+
 /* Forms & Inputs */
 form {
     display: flex;
@@ -100,6 +251,7 @@ form {
     gap: 20px;
     text-align: left;
 }
+
 
 label {
     font-size: 0.75rem;
@@ -345,6 +497,151 @@ button:hover {
     text-shadow: 0 0 5px var(--accent-cyan);
 }
 
+/* Profiles List - Compact Side Style */
+.profiles-list {
+    margin-bottom: 30px;
+    text-align: left;
+}
+
+.profiles-list h2 {
+    font-size: 0.9rem;
+    color: var(--text-dim);
+    margin-bottom: 15px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    text-align: center;
+}
+
+.profiles-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 20px;
+    max-height: 300px;
+    overflow-y: auto;
+    padding-right: 5px;
+}
+
+/* Custom Scrollbar */
+.profiles-grid::-webkit-scrollbar {
+    width: 5px;
+}
+.profiles-grid::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.2);
+}
+.profiles-grid::-webkit-scrollbar-thumb {
+    background: var(--glass-border);
+    border-radius: 5px;
+}
+
+.profile-card {
+    background: rgba(0, 10, 20, 0.6);
+    border: 1px solid var(--glass-border);
+    border-radius: 8px;
+    padding: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: all 0.3s ease;
+}
+
+.profile-card:hover {
+    background: rgba(0, 30, 60, 0.6);
+    border-color: var(--accent-cyan);
+    box-shadow: 0 0 10px rgba(0, 255, 150, 0.1);
+}
+
+.profile-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.profile-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 1px solid var(--accent-cyan);
+    object-fit: cover;
+}
+
+.profile-name {
+    font-size: 0.9rem;
+    color: var(--text-main);
+    font-weight: 500;
+}
+
+.profile-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.btn-select {
+    background: rgba(0, 255, 150, 0.1);
+    border: 1px solid var(--accent-cyan);
+    color: var(--accent-cyan);
+    padding: 5px 12px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    width: auto;
+    letter-spacing: 1px;
+    box-shadow: none;
+}
+
+.btn-select:hover {
+    background: rgba(0, 255, 150, 0.3);
+    box-shadow: 0 0 10px rgba(0, 255, 150, 0.2);
+}
+
+.btn-delete {
+    background: transparent;
+    border: 1px solid var(--text-dim);
+    color: var(--text-dim);
+    padding: 5px 8px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.7rem;
+    width: auto;
+    box-shadow: none;
+    line-height: 1;
+}
+
+.btn-delete:hover {
+    border-color: #ff4d4d;
+    color: #ff4d4d;
+    background: rgba(255, 77, 77, 0.1);
+}
+
+.divider {
+    text-align: center;
+    margin-bottom: 20px;
+    color: var(--text-dim);
+    position: relative;
+    font-size: 0.8rem;
+}
+
+.divider::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 0;
+    width: 100%;
+    height: 1px;
+    background: var(--glass-border);
+    z-index: -1;
+    opacity: 0.5;
+}
+
+.divider::after {
+    content: 'OU';
+    background: #060f18; /* Match roughly container bg */
+    padding: 0 10px;
+    position: relative;
+}
+
 /* Mobile Adjustments */
 @media (max-width: 480px) {
     body { padding: 10px; }
@@ -353,4 +650,7 @@ button:hover {
     .shahada { font-size: 1.2rem; }
     .user-profile { padding: 15px; }
     .user-avatar { width: 50px; height: 50px; }
+    .profile-card { padding: 8px; }
+    .profile-avatar { width: 28px; height: 28px; }
+    .profile-name { font-size: 0.8rem; }
 }

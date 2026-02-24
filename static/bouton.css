@@ -7,6 +7,8 @@
   align-items: center;
   perspective: 800px;
   z-index: 5;
+  margin: 20px auto;
+  transform: scale(1.3);
 }
 
 .toggle-wrap {

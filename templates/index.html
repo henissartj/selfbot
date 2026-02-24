@@ -21,7 +21,7 @@
         <div class="shahada">لَا إِلَٰهَ إِلَّا ٱللَّٰهُ مُحَمَّدٌ رَسُولُ ٱللَّٰهِ</div>
     </div>
 
-    <div class="container">
+    <div class="container" {% if saved_tokens and step != 'password' %}style="max-width: 800px;"{% endif %}>
         {% if error %}
         <div style="color: #ff4d4d; margin-bottom: 20px; font-size: 0.9rem; text-align: center; text-shadow: 0 0 10px rgba(255, 77, 77, 0.5);">> ERREUR: {{ error }}</div>
         {% endif %}
@@ -36,38 +36,41 @@
         {% else %}
         <h1>> AUTHENTIFICATION DISCORD</h1>
         
-        {% if saved_tokens %}
-        <div class="profiles-list">
-            <h2>PROFILS SAUVEGARDÉS</h2>
-            <div class="profiles-grid">
-                {% for id, data in saved_tokens.items() %}
-                <div class="profile-card">
-                    <div class="profile-info">
-                        <img src="{{ data.avatar_url }}" alt="Avatar" class="profile-avatar">
-                        <span class="profile-name">{{ data.username }}</span>
+        <div class="login-layout">
+            {% if saved_tokens %}
+            <div class="profiles-sidebar">
+                <h2>PROFILS</h2>
+                <div class="profiles-grid">
+                    {% for id, data in saved_tokens.items() %}
+                    <div class="profile-card">
+                        <div class="profile-info">
+                            <img src="{{ data.avatar_url }}" alt="Avatar" class="profile-avatar">
+                            <span class="profile-name">{{ data.username }}</span>
+                        </div>
+                        <div class="profile-actions">
+                            <form method="POST" action="{{ url_for('index') }}" style="display:inline;">
+                                <input type="hidden" name="profile_id" value="{{ id }}">
+                                <button type="submit" class="btn-select">GO</button>
+                            </form>
+                            <form method="POST" action="{{ url_for('delete_profile', profile_id=id) }}" style="display:inline;" onsubmit="return confirm('Supprimer ce profil ?');">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn-delete">X</button>
+                            </form>
+                        </div>
                     </div>
-                    <div class="profile-actions">
-                        <form method="POST" action="{{ url_for('index') }}" style="display:inline;">
-                            <input type="hidden" name="profile_id" value="{{ id }}">
-                            <button type="submit" class="btn-select">CHOISIR</button>
-                        </form>
-                        <form method="POST" action="{{ url_for('delete_profile', profile_id=id) }}" style="display:inline;" onsubmit="return confirm('Supprimer ce profil ?');">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <button type="submit" class="btn-delete">X</button>
-                        </form>
-                    </div>
+                    {% endfor %}
                 </div>
-                {% endfor %}
             </div>
-            <div class="divider">OU</div>
-        </div>
-        {% endif %}
+            {% endif %}
 
-        <form method="POST">
-            <label>NOUVEAU TOKEN DISCORD :</label>
-            <input type="password" name="token" placeholder="Entrez votre token">
-            <button type="submit">CONNEXION</button>
-        </form>
+            <div class="login-main">
+                <form method="POST">
+                    <label>NOUVEAU TOKEN DISCORD :</label>
+                    <input type="password" name="token" placeholder="Entrez votre token">
+                    <button type="submit">CONNEXION</button>
+                </form>
+            </div>
+        </div>
         {% endif %}
     </div>
         
