@@ -159,6 +159,16 @@ button:hover {
     text-shadow: 0 0 5px var(--accent-cyan);
 }
 
+.actions {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 30px 0;
+    width: 100%;
+}
+
+/* Toggle Switch - Holo Style */
+
 /* Status Box */
 .status-box {
     background: rgba(0, 10, 20, 0.4);

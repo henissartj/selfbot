@@ -38,7 +38,7 @@
             {% endif %}
             
             <div class="user-info">
-                <span class="user-name">{{ user.username }}#{{ user.discriminator }}</span>
+                <span class="user-name">{{ user.username }}{% if user.discriminator and user.discriminator != '0' %}#{{ user.discriminator }}{% endif %}</span>
                 <span class="user-status">CONNECTÉ EN TANT QUE {{ user.username }}</span>
             </div>
         </div>
@@ -105,13 +105,26 @@
                 document.getElementById('holo-toggle').addEventListener('change', function() {
                     const action = this.checked ? '/start' : '/stop';
                     this.disabled = true;
-                    fetch(action, { method: 'POST' })
-                        .then(() => window.location.reload())
-                        .catch(err => {
-                            console.error(err);
-                            this.disabled = false;
-                            alert('Erreur lors du changement d\'état.');
-                        });
+                    
+                    fetch(action, { 
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': '{{ csrf_token() }}'
+                        }
+                    })
+                    .then(response => {
+                        if (response.ok) {
+                            window.location.reload();
+                        } else {
+                            alert('Erreur: Le bot n\'a pas pu démarrer. Vérifiez votre token ou les logs.');
+                            window.location.reload(); // Reload to reset toggle state
+                        }
+                    })
+                    .catch(err => {
+                        console.error(err);
+                        alert('Erreur réseau.');
+                        window.location.reload();
+                    });
                 });
             </script>
         </div>

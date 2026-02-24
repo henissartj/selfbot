@@ -5,10 +5,31 @@ import os
 import signal
 import sys
 import requests
+import secrets
+import time
 
 app = Flask(__name__)
 # Use a fixed secret key or environment variable to prevent logout on restart
 app.secret_key = os.environ.get('SECRET_KEY', 'super_secret_key_for_selfbot_12345')
+
+# CSRF Protection
+@app.before_request
+def csrf_protect():
+    if request.method == "POST":
+        token = session.get('csrf_token')
+        if not token or token != request.headers.get('X-CSRFToken'):
+            # Allow login form without X-CSRFToken header if it uses form field (handled manually below)
+            if request.endpoint == 'index':
+                pass 
+            else:
+                return "CSRF Token invalid", 403
+
+def generate_csrf_token():
+    if 'csrf_token' not in session:
+        session['csrf_token'] = secrets.token_hex(16)
+    return session['csrf_token']
+
+app.jinja_env.globals['csrf_token'] = generate_csrf_token
 
 # Configuration du mot de passe du site
 # On cherche d'abord dans une variable d'environnement
@@ -59,6 +80,7 @@ def index():
     # Vérification du mot de passe du site
     if not session.get('site_access'):
         if request.method == 'POST':
+            time.sleep(1) # Simple brute-force delay
             password = request.form.get('password')
             if password == SITE_PASSWORD:
                 session['site_access'] = True
@@ -106,17 +128,23 @@ def dashboard():
 def start_bot():
     global BOT_PROCESS
     if 'token' not in session:
-        return redirect(url_for('index'))
+        return "Unauthorized", 401
     
     if BOT_PROCESS and BOT_PROCESS.is_alive():
-        return redirect(url_for('dashboard'))
+        return "Already running", 200
         
     token = session['token']
     # Start bot in a separate process
     BOT_PROCESS = multiprocessing.Process(target=run_bot_process, args=(token,))
     BOT_PROCESS.daemon = True
     BOT_PROCESS.start()
-    return redirect(url_for('dashboard'))
+    
+    # Wait a bit to see if it crashes immediately
+    time.sleep(1)
+    if not BOT_PROCESS.is_alive():
+        return "Failed to start", 500
+        
+    return "Started", 200
 
 @app.route('/stop', methods=['POST'])
 def stop_bot():
@@ -128,7 +156,7 @@ def stop_bot():
             BOT_PROCESS.kill()
             BOT_PROCESS.join()
         BOT_PROCESS = None
-    return redirect(url_for('dashboard'))
+    return "Stopped", 200
 
 @app.route('/logout')
 def logout():
