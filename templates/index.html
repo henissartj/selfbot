@@ -7,9 +7,9 @@
     <title>ACCÈS ROOT</title>
     <style>
         body {
-            background-color: #000000;
-            color: #e0e0e0;
-            font-family: 'Courier New', Courier, monospace;
+            background-color: #36393f;
+            color: #dcddde;
+            font-family: 'gg sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -22,95 +22,103 @@
         .shahada-container {
             width: 100%;
             text-align: center;
-            margin-top: 50px; /* Baisse un peu la position */
-            margin-bottom: 2rem;
-            min-height: 40px;
+            margin-top: 80px; /* Encore plus bas */
+            margin-bottom: 3rem;
         }
 
         .shahada {
-            font-size: 1.5rem;
+            font-size: 2rem;
             color: #fff;
             font-weight: bold;
             display: inline-block;
-            border-right: 2px solid #fff;
-            white-space: nowrap;
-            overflow: hidden;
-            animation: typing 4s steps(40, end), blink-caret .75s step-end infinite;
+            animation: glow 3s ease-in-out infinite alternate;
         }
 
-        @keyframes typing {
-            from { width: 0 }
-            to { width: 100% }
-        }
-
-        @keyframes blink-caret {
-            from, to { border-color: transparent }
-            50% { border-color: #fff; }
+        @keyframes glow {
+            from {
+                text-shadow: 0 0 5px #fff, 0 0 10px #fff;
+                opacity: 0.8;
+            }
+            to {
+                text-shadow: 0 0 20px #fff, 0 0 30px #ffd700;
+                opacity: 1;
+            }
         }
 
         .container {
             width: 100%;
             max-width: 400px;
-            text-align: left;
-            margin-top: 20px;
+            background-color: #2f3136;
+            padding: 30px;
+            border-radius: 5px;
+            box-shadow: 0 2px 10px 0 rgba(0,0,0,0.2);
+            text-align: center;
             margin-bottom: auto;
         }
 
         h1 {
-            font-size: 1.2rem;
-            margin-bottom: 2rem;
-            font-weight: normal;
-            border-bottom: 1px solid #333;
-            padding-bottom: 10px;
-            letter-spacing: -1px;
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            color: #fff;
+            font-weight: 600;
+            border-bottom: none;
+            padding-bottom: 0;
+            letter-spacing: normal;
         }
 
         form {
             display: flex;
             flex-direction: column;
-            gap: 15px;
+            gap: 20px;
+            text-align: left;
         }
 
         label {
-            font-size: 0.8rem;
-            color: #666;
+            font-size: 0.75rem;
+            color: #b9bbbe;
+            text-transform: uppercase;
+            font-weight: bold;
             margin-bottom: -10px;
         }
 
         input[type="password"] {
-            background-color: #000;
-            border: 1px solid #333;
-            color: #fff;
-            padding: 15px;
-            font-family: 'Courier New', Courier, monospace;
+            background-color: #202225;
+            border: 1px solid #202225;
+            color: #dcddde;
+            padding: 10px;
+            font-family: inherit;
             font-size: 1rem;
             width: 100%;
             box-sizing: border-box;
-            border-radius: 0;
+            border-radius: 3px;
             outline: none;
+            transition: border-color 0.2s;
+            height: 40px;
         }
 
         input[type="password"]:focus {
-            border-color: #666;
+            border-color: #5865F2;
         }
 
         button {
-            background-color: #111;
+            background-color: #5865F2;
             color: #fff;
-            border: 1px solid #333;
-            padding: 15px;
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 0.9rem;
+            border: none;
+            padding: 2px 16px;
+            font-family: inherit;
+            font-size: 1rem;
             cursor: pointer;
-            text-transform: uppercase;
+            text-transform: none;
             width: 100%;
-            border-radius: 0;
-            transition: all 0.2s;
+            border-radius: 3px;
+            transition: background-color 0.2s;
+            height: 44px;
+            font-weight: 500;
         }
 
         button:hover {
-            background-color: #fff;
-            color: #000;
+            background-color: #4752c4;
+            color: #fff;
         }
 
         .footer-logo {
@@ -121,41 +129,48 @@
         }
 
         .footer-logo img {
-            max-width: 150px;
-            filter: grayscale(100%) contrast(120%);
-            opacity: 0.7;
+            max-width: 120px;
+            filter: grayscale(100%) brightness(0.7);
+            opacity: 0.5;
+            transition: all 0.3s;
+        }
+        
+        .footer-logo:hover img {
+            filter: none;
+            opacity: 1;
         }
 
         .credits {
-            margin-top: 15px;
+            margin-top: 10px;
             font-size: 0.7rem;
-            color: #444;
-            text-transform: uppercase;
+            color: #72767d;
         }
         
         .credits span {
-            color: #888;
+            color: #dcddde;
             font-weight: bold;
         }
 
         .emprise-link {
             display: block;
-            margin-top: 10px;
-            color: #444;
+            margin-top: 5px;
+            color: #72767d;
             text-decoration: none;
             font-size: 0.7rem;
             transition: color 0.2s;
         }
 
         .emprise-link:hover {
-            color: #fff;
+            color: #dcddde;
             text-decoration: underline;
         }
 
         /* Mobile adjustments */
         @media (max-width: 480px) {
-            h1 { font-size: 1rem; }
-            input, button { font-size: 1rem; padding: 12px; }
+            body { padding: 10px; }
+            .shahada-container { margin-top: 40px; }
+            .container { padding: 20px; max-width: 100%; }
+            .shahada { font-size: 1.2rem; }
         }
     </style>
 </head>
