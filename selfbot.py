@@ -24,7 +24,7 @@ def ask_token():
     return token
 
 TOKEN = None # Will be set via run_bot or main
-PREFIX = "."
+PREFIX = [".", "+", "!"]
 
 # Configuration Anti-Raid
 ANTIRAID_CONFIG = {
@@ -84,6 +84,22 @@ except Exception:
     # Fallback pour anciennes versions ou autre lib (peut ne pas fonctionner sans intents)
     bot = commands.Bot(command_prefix=PREFIX)
 
+async def reply_private(ctx, content, delete_after=None):
+    """Envoie un message uniquement visible par l'utilisateur (en MP si possible)."""
+    try:
+        # Tente d'envoyer en MP à soi-même (Self-bot feature)
+        # ctx.author est l'utilisateur du selfbot
+        await ctx.author.send(content)
+    except Exception:
+        # Fallback: Envoie dans le channel mais supprime très vite si delete_after est défini
+        # Ou log juste dans la console si on veut être vraiment discret
+        print(f"[PRIVATE RESPONSE] {content}")
+        if delete_after:
+             await ctx.send(content, delete_after=delete_after)
+        else:
+             # Par défaut, on évite de spammer le channel si le MP échoue, on log juste.
+             pass
+
 bot.remove_command('help')
 
 @bot.event
@@ -91,14 +107,15 @@ async def on_command_error(ctx, error):
     if isinstance(error, commands.CommandNotFound):
         return
     print(f"Erreur commande '{ctx.command}': {error}")
-    await ctx.send(f"Erreur: {error}", delete_after=5)
+    # Erreurs envoyées en privé aussi
+    await reply_private(ctx, f"Erreur: {error}", delete_after=5)
 
 @bot.command()
 async def whitelist(ctx, user: discord.Member):
     """Ajoute un utilisateur à la whitelist antiraid."""
     await ctx.message.delete()
     WHITELIST.add(user.id)
-    await ctx.send(f"{user} ajouté à la whitelist.", delete_after=5)
+    await reply_private(ctx, f"{user} ajouté à la whitelist.", delete_after=5)
 
 @bot.command()
 async def unwhitelist(ctx, user: discord.Member):
@@ -106,7 +123,7 @@ async def unwhitelist(ctx, user: discord.Member):
     await ctx.message.delete()
     if user.id in WHITELIST:
         WHITELIST.remove(user.id)
-        await ctx.send(f"{user} retiré de la whitelist.", delete_after=5)
+        await reply_private(ctx, f"{user} retiré de la whitelist.", delete_after=5)
 
 # --- Événements Anti-Raid ---
 
@@ -247,21 +264,21 @@ async def antiraid(ctx, setting: str = None, value: str = None):
     await ctx.message.delete()
     if not setting:
         status = "\n".join(f"{k}: {'ON' if v else 'OFF'}" for k, v in ANTIRAID_CONFIG.items())
-        await ctx.send(f"**Configuration Anti-Raid**\n```{status}```", delete_after=20)
+        await reply_private(ctx, f"**Configuration Anti-Raid**\n```{status}```")
         return
 
     if setting.lower() not in ANTIRAID_CONFIG:
-        await ctx.send("Module inconnu.", delete_after=5)
+        await reply_private(ctx, "Module inconnu.", delete_after=5)
         return
 
     if value and value.lower() in ["on", "true", "enable"]:
         ANTIRAID_CONFIG[setting.lower()] = True
-        await ctx.send(f"Module {setting} activé.", delete_after=5)
+        await reply_private(ctx, f"Module {setting} activé.", delete_after=5)
     elif value and value.lower() in ["off", "false", "disable"]:
         ANTIRAID_CONFIG[setting.lower()] = False
-        await ctx.send(f"Module {setting} désactivé.", delete_after=5)
+        await reply_private(ctx, f"Module {setting} désactivé.", delete_after=5)
     else:
-        await ctx.send("Usage: .antiraid <module> <on/off>", delete_after=5)
+        await reply_private(ctx, "Usage: .antiraid <module> <on/off>", delete_after=5)
 
 @bot.command()
 async def help(ctx, category: str = None):
@@ -345,7 +362,7 @@ async def help(ctx, category: str = None):
         for key, data in categories.items():
             help_text += f"[{data['icon']} {data['title']}]\nCommande : .help {key}\n\n"
         help_text += "```"
-        await ctx.send(help_text)
+        await reply_private(ctx, help_text)
     else:
         cat = category.lower()
         if cat in categories:
@@ -354,14 +371,14 @@ async def help(ctx, category: str = None):
             for cmd in data['commands']:
                 help_text += f"{cmd}\n"
             help_text += "```"
-            await ctx.send(help_text)
+            await reply_private(ctx, help_text)
         else:
-            await ctx.send(f"Catégorie introuvable. Faites .help pour la liste.", delete_after=5)
+            await reply_private(ctx, f"Catégorie introuvable. Faites .help pour la liste.", delete_after=5)
 
 @bot.command()
 async def ping(ctx):
     await ctx.message.delete()
-    await ctx.send("pong")
+    await reply_private(ctx, "pong")
 
 @bot.command()
 async def nuke(ctx):
@@ -563,7 +580,7 @@ async def tokeninfo(ctx):
     """Affiche les infos du token utilisé."""
     await ctx.message.delete()
     user = bot.user
-    await ctx.send(f"**Token Infos**\nNom: {user}\nID: {user.id}\nEmail: {user.email if hasattr(user, 'email') else 'N/A'}\nVérifié: {user.verified}")
+    await reply_private(ctx, f"**Token Infos**\nNom: {user}\nID: {user.id}\nEmail: {user.email if hasattr(user, 'email') else 'N/A'}\nVérifié: {user.verified}")
 
 @bot.command()
 async def copyguild(ctx, guild_id: int):
