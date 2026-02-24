@@ -52,7 +52,7 @@ def add_security_headers(response):
     response.headers['X-Frame-Options'] = 'DENY'
     response.headers['X-XSS-Protection'] = '1; mode=block'
     response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
-    response.headers['Content-Security-Policy'] = "default-src 'self' https://cdn.discordapp.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://cdn.discordapp.com; font-src 'self' data:;"
+    response.headers['Content-Security-Policy'] = "default-src 'self' https://cdn.discordapp.com; script-src 'self' 'unsafe-inline' https://cdn.discordapp.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https://cdn.discordapp.com; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self';"
     return response
 
 # Global variable to store the bot process

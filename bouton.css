@@ -2,6 +2,7 @@
 .toggle-container {
   position: relative;
   width: 150px;
+  margin: 0 auto;
   display: flex;
   flex-direction: column;
   align-items: center;
