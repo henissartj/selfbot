@@ -7,8 +7,10 @@ import sys
 import requests
 import secrets
 import time
+from token_manager import TokenManager
 
 app = Flask(__name__)
+token_manager = TokenManager()
 # Use a fixed secret key or environment variable to prevent logout on restart
 app.secret_key = os.environ.get('SECRET_KEY', 'super_secret_key_for_selfbot_12345')
 
@@ -91,6 +93,7 @@ def index():
 
     # Si on a l'accès site, on gère le token
     if request.method == 'POST':
+        # Cas 1: Nouveau token
         token = request.form.get('token')
         if token:
             # Clean token similar to selfbot.ask_token
@@ -98,16 +101,44 @@ def index():
             # Vérifier si le token est valide
             user_info = get_discord_user_info(token)
             if user_info:
+                # Sauvegarder le token
+                token_manager.save_token(user_info, token)
+                
                 session['token'] = token
                 session['user_info'] = user_info
                 return redirect(url_for('dashboard'))
             else:
-                return render_template('index.html', error="Token invalide", step="token")
-            
+                return render_template('index.html', error="Token invalide", step="token", saved_tokens=token_manager.load_tokens())
+        
+        # Cas 2: Sélection d'un profil existant
+        profile_id = request.form.get('profile_id')
+        if profile_id:
+            saved_data = token_manager.get_token(profile_id)
+            if saved_data:
+                session['token'] = saved_data['token']
+                # Reconstruire user_info minimal pour l'affichage
+                session['user_info'] = {
+                    'id': saved_data['id'],
+                    'username': saved_data['username'],
+                    'discriminator': saved_data['discriminator'],
+                    'avatar': saved_data['avatar_url'].split('/')[-1].split('.')[0] if 'avatars' in saved_data['avatar_url'] else None
+                }
+                return redirect(url_for('dashboard'))
+
     if 'token' in session:
         return redirect(url_for('dashboard'))
         
-    return render_template('index.html', step="token")
+    # Charger les profils sauvegardés
+    saved_tokens = token_manager.load_tokens()
+    return render_template('index.html', step="token", saved_tokens=saved_tokens)
+
+@app.route('/delete_profile/<profile_id>', methods=['POST'])
+def delete_profile(profile_id):
+    if not session.get('site_access'):
+        return redirect(url_for('index'))
+    
+    token_manager.delete_token(profile_id)
+    return redirect(url_for('index'))
 
 @app.route('/dashboard')
 def dashboard():

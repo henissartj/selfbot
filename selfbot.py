@@ -85,20 +85,14 @@ except Exception:
     bot = commands.Bot(command_prefix=PREFIX)
 
 async def reply_private(ctx, content, delete_after=None):
-    """Envoie un message uniquement visible par l'utilisateur (en MP si possible)."""
+    """Envoie un message dans le salon actuel (public)."""
     try:
-        # Tente d'envoyer en MP à soi-même (Self-bot feature)
-        # ctx.author est l'utilisateur du selfbot
-        await ctx.author.send(content)
-    except Exception:
-        # Fallback: Envoie dans le channel mais supprime très vite si delete_after est défini
-        # Ou log juste dans la console si on veut être vraiment discret
-        print(f"[PRIVATE RESPONSE] {content}")
         if delete_after:
-             await ctx.send(content, delete_after=delete_after)
+            await ctx.send(content, delete_after=delete_after)
         else:
-             # Par défaut, on évite de spammer le channel si le MP échoue, on log juste.
-             pass
+            await ctx.send(content)
+    except Exception as e:
+        print(f"[PUBLIC RESPONSE ERROR] {e}")
 
 bot.remove_command('help')
 

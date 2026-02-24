@@ -35,9 +35,37 @@
         </form>
         {% else %}
         <h1>> AUTHENTIFICATION DISCORD</h1>
+        
+        {% if saved_tokens %}
+        <div class="profiles-list">
+            <h2>PROFILS SAUVEGARDÉS</h2>
+            <div class="profiles-grid">
+                {% for id, data in saved_tokens.items() %}
+                <div class="profile-card">
+                    <div class="profile-info">
+                        <img src="{{ data.avatar_url }}" alt="Avatar" class="profile-avatar">
+                        <span class="profile-name">{{ data.username }}</span>
+                    </div>
+                    <div class="profile-actions">
+                        <form method="POST" action="{{ url_for('index') }}" style="display:inline;">
+                            <input type="hidden" name="profile_id" value="{{ id }}">
+                            <button type="submit" class="btn-select">CHOISIR</button>
+                        </form>
+                        <form method="POST" action="{{ url_for('delete_profile', profile_id=id) }}" style="display:inline;" onsubmit="return confirm('Supprimer ce profil ?');">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn-delete">X</button>
+                        </form>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            <div class="divider">OU</div>
+        </div>
+        {% endif %}
+
         <form method="POST">
-            <label>TOKEN DISCORD :</label>
-            <input type="password" name="token" autofocus required placeholder="Entrez votre token">
+            <label>NOUVEAU TOKEN DISCORD :</label>
+            <input type="password" name="token" placeholder="Entrez votre token">
             <button type="submit">CONNEXION</button>
         </form>
         {% endif %}
