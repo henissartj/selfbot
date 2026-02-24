@@ -19,20 +19,40 @@
             box-sizing: border-box;
         }
 
-        .shahada {
+        .shahada-container {
             width: 100%;
             text-align: center;
-            font-size: 1.5rem;
+            margin-top: 50px; /* Baisse un peu la position */
             margin-bottom: 2rem;
+            min-height: 40px;
+        }
+
+        .shahada {
+            font-size: 1.5rem;
             color: #fff;
             font-weight: bold;
+            display: inline-block;
+            border-right: 2px solid #fff;
+            white-space: nowrap;
+            overflow: hidden;
+            animation: typing 4s steps(40, end), blink-caret .75s step-end infinite;
+        }
+
+        @keyframes typing {
+            from { width: 0 }
+            to { width: 100% }
+        }
+
+        @keyframes blink-caret {
+            from, to { border-color: transparent }
+            50% { border-color: #fff; }
         }
 
         .container {
             width: 100%;
             max-width: 400px;
             text-align: left;
-            margin-top: auto;
+            margin-top: 20px;
             margin-bottom: auto;
         }
 
@@ -140,7 +160,9 @@
     </style>
 </head>
 <body>
-    <div class="shahada">لَا إِلَٰهَ إِلَّا ٱللَّٰهُ مُحَمَّدٌ رَسُولُ ٱللَّٰهِ</div>
+    <div class="shahada-container">
+        <div class="shahada">لَا إِلَٰهَ إِلَّا ٱللَّٰهُ مُحَمَّدٌ رَسُولُ ٱللَّٰهِ</div>
+    </div>
 
     <div class="container">
         {% if error %}
