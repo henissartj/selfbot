@@ -123,17 +123,17 @@ def stop_bot():
     global BOT_PROCESS
     if BOT_PROCESS and BOT_PROCESS.is_alive():
         BOT_PROCESS.terminate()
-        BOT_PROCESS.join()
+        BOT_PROCESS.join(timeout=2)
+        if BOT_PROCESS.is_alive():
+            BOT_PROCESS.kill()
+            BOT_PROCESS.join()
         BOT_PROCESS = None
     return redirect(url_for('dashboard'))
 
 @app.route('/logout')
 def logout():
-    # Optional: Stop bot on logout? 
-    # Usually users want the bot to keep running even if they close the tab.
-    # But if they logout explicitly, maybe stop it? 
-    # Let's keep it running unless they click stop.
     session.pop('token', None)
+    session.pop('site_access', None)
     return redirect(url_for('index'))
 
 if __name__ == '__main__':
