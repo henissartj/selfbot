@@ -6,7 +6,8 @@ import signal
 import sys
 
 app = Flask(__name__)
-app.secret_key = os.urandom(24)
+# Use a fixed secret key or environment variable to prevent logout on restart
+app.secret_key = os.environ.get('SECRET_KEY', 'super_secret_key_for_selfbot_12345')
 
 # Security headers middleware
 @app.after_request
