@@ -3,6 +3,7 @@ import os
 import signal
 import sys
 import time
+import selfbot
 
 # PID file to track the process
 PID_FILE = "bot.pid"
