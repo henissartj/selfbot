@@ -28,37 +28,39 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    min-height: 100vh;
-    overflow-x: hidden;
+    justify-content: center;
+    height: 100vh;
+    overflow: hidden;
 }
 
 /* Typography */
 h1, h2, h3 {
     color: #fff;
-    margin: 0 0 20px 0;
+    margin: 0 0 16px 0;
     font-weight: 600;
 }
 
-h1 { font-size: 1.5rem; text-align: center; }
-h2 { font-size: 1rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--discord-text-muted); margin-bottom: 10px; }
+h1 { font-size: 1.4rem; text-align: center; }
+h2 { font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--discord-text-muted); margin-bottom: 8px; }
 
 /* Shahada */
 .shahada-container {
     width: 100%;
     text-align: center;
-    padding: 40px 20px 20px;
+    padding: 20px;
     opacity: 0.9;
     z-index: 10;
+    margin-bottom: 0;
 }
 .shahada {
-    font-size: 3rem;
+    font-size: 2.5rem;
     color: var(--discord-text-main);
     font-weight: 700;
-    margin-bottom: 12px;
+    margin-bottom: 8px;
     text-shadow: 0 2px 4px rgba(0,0,0,0.5);
 }
 .shahada-sub {
-    font-size: 1.8rem;
+    font-size: 1.4rem;
     color: var(--discord-text-muted);
     font-weight: 500;
     text-shadow: 0 1px 2px rgba(0,0,0,0.5);
@@ -72,13 +74,15 @@ h2 { font-size: 1rem; text-transform: uppercase; letter-spacing: 0.5px; color: v
     border-radius: 16px;
     box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
     border: 1px solid rgba(255, 255, 255, 0.08);
-    padding: 32px;
-    width: 100%;
-    max-width: 480px;
-    margin: 20px auto;
+    padding: 24px;
+    width: 90%;
+    max-width: 440px;
+    margin: 0 auto;
     transition: all 0.2s ease;
     z-index: 10;
     position: relative;
+    max-height: 70vh;
+    overflow-y: auto;
 }
 
 /* Login Layout */
