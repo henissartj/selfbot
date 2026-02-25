@@ -3,15 +3,31 @@ import os
 import signal
 import sys
 import time
-import selfbot
+import json
 
-# PID file to track the process
-PID_FILE = "bot.pid"
+# Directory to store PIDs
+PID_DIR = "pids"
+LOG_DIR = "logs"
 
-def is_bot_running():
-    if os.path.exists(PID_FILE):
+def _ensure_dirs():
+    if not os.path.exists(PID_DIR):
+        os.makedirs(PID_DIR)
+    if not os.path.exists(LOG_DIR):
+        os.makedirs(LOG_DIR)
+
+def get_pid_file(user_id):
+    _ensure_dirs()
+    return os.path.join(PID_DIR, f"{user_id}.pid")
+
+def get_log_file(user_id):
+    _ensure_dirs()
+    return os.path.join(LOG_DIR, f"{user_id}.log")
+
+def is_bot_running(user_id):
+    pid_file = get_pid_file(user_id)
+    if os.path.exists(pid_file):
         try:
-            with open(PID_FILE, 'r') as f:
+            with open(pid_file, 'r') as f:
                 pid = int(f.read().strip())
             
             # Check if process exists
@@ -19,31 +35,31 @@ def is_bot_running():
                 os.kill(pid, 0)
                 return True
             except OSError:
+                # Process dead, cleanup
+                try:
+                    os.remove(pid_file)
+                except:
+                    pass
                 return False
         except (ValueError, Exception):
             return False
     return False
 
-def start_bot(token):
-    if is_bot_running():
+def start_bot(user_id, token):
+    if is_bot_running(user_id):
         return False, "Already running"
 
-    # Use system python3 (which has discord.py-self installed)
-    # We try to use /usr/bin/python3 to avoid using the venv's python
     python_executable = "/usr/bin/python3"
     if not os.path.exists(python_executable):
-        # Fallback if not on Linux standard path
         python_executable = "python3"
 
     env = os.environ.copy()
     env["DISCORD_TOKEN"] = token
     
     try:
-        # Open log file
-        log_file = open("selfbot.log", "a")
+        log_path = get_log_file(user_id)
+        log_file = open(log_path, "a")
         
-        # Start subprocess detached
-        # selfbot.py MUST be in the same directory
         p = subprocess.Popen(
             [python_executable, "selfbot.py"],
             env=env,
@@ -53,44 +69,50 @@ def start_bot(token):
             start_new_session=True
         )
         
-        # Write PID
-        with open(PID_FILE, 'w') as f:
+        with open(get_pid_file(user_id), 'w') as f:
             f.write(str(p.pid))
             
-        # Wait a bit to see if it crashes immediately
         time.sleep(3)
         if p.poll() is not None:
-             return False, f"Failed to start (Exit code: {p.returncode})"
+            error_msg = f"Exit code: {p.returncode}"
+            try:
+                with open(log_path, "r") as lf:
+                    lines = lf.readlines()
+                    last_lines = lines[-10:] if len(lines) > 10 else lines
+                    error_details = "".join(last_lines)
+                    error_msg += f"\nLogs:\n{error_details}"
+            except:
+                error_msg += " (Could not read logs)"
+            return False, f"Failed: {error_msg}"
              
         return True, "Started"
     except Exception as e:
         return False, f"Error launching: {e}"
 
-def stop_bot():
-    if os.path.exists(PID_FILE):
+def stop_bot(user_id):
+    pid_file = get_pid_file(user_id)
+    if os.path.exists(pid_file):
         try:
-            with open(PID_FILE, 'r') as f:
+            with open(pid_file, 'r') as f:
                 pid = int(f.read().strip())
             
             os.kill(pid, signal.SIGTERM)
             time.sleep(1)
             
-            # Force cleanup if still exists
-            if os.path.exists(PID_FILE):
+            if os.path.exists(pid_file):
                 try:
                     os.kill(pid, signal.SIGKILL)
                 except:
                     pass
                 try:
-                    os.remove(PID_FILE)
+                    os.remove(pid_file)
                 except:
                     pass
             return True, "Stopped"
         except Exception as e:
-            # Try to clean up file anyway
-            if os.path.exists(PID_FILE):
+            if os.path.exists(pid_file):
                 try:
-                    os.remove(PID_FILE)
+                    os.remove(pid_file)
                 except:
                     pass
             return False, f"Error stopping: {e}"

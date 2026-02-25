@@ -45,14 +45,15 @@ class TokenModal(ui.Modal, title="Connexion Selfbot"):
         await interaction.response.defer(ephemeral=True)
         
         token = self.token_input.value.strip().strip('"').strip("'")
+        user_id = str(interaction.user.id)
         
         # Check if already running
-        if bot_manager.is_bot_running():
-            await interaction.followup.send("Le selfbot est déjà en ligne !", ephemeral=True)
+        if bot_manager.is_bot_running(user_id):
+            await interaction.followup.send("Votre selfbot est déjà en ligne !", ephemeral=True)
             return
 
         # Start the bot
-        success, message = bot_manager.start_bot(token)
+        success, message = bot_manager.start_bot(user_id, token)
         
         if success:
             await interaction.followup.send(f"✅ {message}", ephemeral=True)
@@ -65,18 +66,20 @@ class ControlView(ui.View):
 
     @discord.ui.button(label="Connexion", style=discord.ButtonStyle.green, custom_id="selfbot_connect")
     async def connect_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if bot_manager.is_bot_running():
-            await interaction.response.send_message("Le selfbot est déjà en ligne !", ephemeral=True)
+        user_id = str(interaction.user.id)
+        if bot_manager.is_bot_running(user_id):
+            await interaction.response.send_message("Votre selfbot est déjà en ligne !", ephemeral=True)
         else:
             await interaction.response.send_modal(TokenModal())
 
     @ui.button(label="Déconnexion", style=discord.ButtonStyle.red, custom_id="selfbot_disconnect")
     async def disconnect_button(self, interaction: discord.Interaction, button: ui.Button):
-        if not bot_manager.is_bot_running():
-            await interaction.response.send_message("Le selfbot n'est pas en ligne.", ephemeral=True)
+        user_id = str(interaction.user.id)
+        if not bot_manager.is_bot_running(user_id):
+            await interaction.response.send_message("Votre selfbot n'est pas en ligne.", ephemeral=True)
             return
         
-        success, message = bot_manager.stop_bot()
+        success, message = bot_manager.stop_bot(user_id)
         if success:
             await interaction.response.send_message("🛑 Selfbot arrêté avec succès.", ephemeral=True)
         else:
@@ -84,9 +87,10 @@ class ControlView(ui.View):
 
     @ui.button(label="Statut", style=discord.ButtonStyle.grey, custom_id="selfbot_status")
     async def status_button(self, interaction: discord.Interaction, button: ui.Button):
-        is_running = bot_manager.is_bot_running()
+        user_id = str(interaction.user.id)
+        is_running = bot_manager.is_bot_running(user_id)
         status_text = "🟢 EN LIGNE" if is_running else "🔴 HORS LIGNE"
-        await interaction.response.send_message(f"Statut du Selfbot: **{status_text}**", ephemeral=True)
+        await interaction.response.send_message(f"Statut de votre Selfbot: **{status_text}**", ephemeral=True)
 
 @bot.event
 async def on_ready():
