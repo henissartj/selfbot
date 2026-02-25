@@ -172,7 +172,7 @@ async def on_ready():
     logger.info(f"Self-Bot connecté comme {bot.user} (ID: {bot.user.id})")
     logger.info(f"Préfixes: {', '.join(PREFIXES)}")
     logger.info(f"Guilds connectés: {len(bot.guilds)}")
-    await bot.change_presence(status=discord.Status.invisible)
+    # Pas de changement de statut automatique (reste en ligne ou reprend le statut du client)
 
 @bot.event
 async def on_command_error(ctx: commands.Context, error: commands.CommandError):
@@ -448,30 +448,30 @@ async def help_command(ctx: commands.Context, category: Optional[str] = None):
     }
 
     if category == "all":
-        all_cmds = "\n".join(
-            f"[{data['icon']} {data['title']}]\n" + "\n".join(data['cmds']) + "\n"
-            for data in help_categories.values()
-        )
-        embed = discord.Embed(title="Toutes les Commandes", description=f"```{all_cmds}```", color=0xFF0000)
-        await ctx.send(embed=embed, delete_after=60)
+        all_cmds = []
+        for data in help_categories.values():
+            all_cmds.append(f"[{data['icon']} {data['title']}]")
+            all_cmds.extend(data['cmds'])
+            all_cmds.append("")
+        
+        content = "```ini\n" + "\n".join(all_cmds) + "\n```"
+        await safe_send(ctx.channel, content, delete_after=60)
         return
 
     if not category:
-        menu = "\n".join(
-            f"{data['icon']} {data['title']} - .help {key}"
-            for key, data in help_categories.items()
-        )
-        embed = discord.Embed(title="Menu d'Aide", description=f"```{menu}```", color=0x00FF00)
-        embed.add_field(name="All", value=".help all pour tout voir", inline=False)
-        await ctx.send(embed=embed, delete_after=60)
+        menu = []
+        for key, data in help_categories.items():
+            menu.append(f"{data['icon']} {data['title']} - .help {key}")
+        
+        content = "```ini\n[ Menu d'Aide ]\n" + "\n".join(menu) + "\n\n[Info] .help all pour tout voir\n```"
+        await safe_send(ctx.channel, content, delete_after=60)
         return
 
     cat_key = category.lower()
     if cat_key in help_categories:
         data = help_categories[cat_key]
-        cmds_list = "\n".join(data['cmds'])
-        embed = discord.Embed(title=f"{data['icon']} {data['title']}", description=f"```{cmds_list}```", color=0x0000FF)
-        await ctx.send(embed=embed, delete_after=60)
+        content = f"```ini\n[{data['icon']} {data['title']}]\n" + "\n".join(data['cmds']) + "\n```"
+        await safe_send(ctx.channel, content, delete_after=60)
     else:
         await safe_send(ctx.channel, "Catégorie inconnue. Faites .help pour le menu.", delete_after=10)
 
