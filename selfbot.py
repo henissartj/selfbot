@@ -1063,7 +1063,11 @@ async def faketyping(ctx, seconds: float = 8.0):
 # ──────────────────────────────────────────────────────────────────────────────
 
 def ask_token():
-    """Demande le token à l'utilisateur."""
+    """Demande le token à l'utilisateur ou via env var."""
+    token = os.environ.get("DISCORD_TOKEN")
+    if token:
+        return token.strip().strip('"').strip("'")
+
     print("\n" + "=" * 60)
     print("         SELF-BOT DISCORD AVANCÉ - VERSION 2026")
     print("=" * 60)

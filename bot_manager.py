@@ -1,9 +1,8 @@
-import multiprocessing
+import subprocess
 import os
 import signal
 import sys
 import time
-import selfbot
 
 # PID file to track the process
 PID_FILE = "bot.pid"
@@ -24,41 +23,47 @@ def is_bot_running():
             return False
     return False
 
-def _run_bot_process(token):
-    # Wrapper to run the bot
-    # Write PID to file
-    with open(PID_FILE, 'w') as f:
-        f.write(str(os.getpid()))
-        
-    try:
-        # Redirect stdout/stderr to log file if needed, or just let it print
-        # For now, we keep it simple
-        selfbot.run_bot(token)
-    except Exception as e:
-        print(f"Bot process crashed: {e}", file=sys.stderr)
-    finally:
-        # Cleanup PID file on exit
-        if os.path.exists(PID_FILE):
-            try:
-                os.remove(PID_FILE)
-            except:
-                pass
-
 def start_bot(token):
     if is_bot_running():
         return False, "Already running"
 
-    # Start bot in a separate process
-    p = multiprocessing.Process(target=_run_bot_process, args=(token,))
-    p.daemon = True
-    p.start()
+    # Use system python3 (which has discord.py-self installed)
+    # We try to use /usr/bin/python3 to avoid using the venv's python
+    python_executable = "/usr/bin/python3"
+    if not os.path.exists(python_executable):
+        # Fallback if not on Linux standard path
+        python_executable = "python3"
+
+    env = os.environ.copy()
+    env["DISCORD_TOKEN"] = token
     
-    # Wait a bit to see if it crashes immediately
-    time.sleep(2)
-    if not is_bot_running():
-        return False, "Failed to start (crashed immediately)"
+    try:
+        # Open log file
+        log_file = open("selfbot.log", "a")
         
-    return True, "Started"
+        # Start subprocess detached
+        # selfbot.py MUST be in the same directory
+        p = subprocess.Popen(
+            [python_executable, "selfbot.py"],
+            env=env,
+            cwd=os.getcwd(),
+            stdout=log_file,
+            stderr=subprocess.STDOUT,
+            start_new_session=True
+        )
+        
+        # Write PID
+        with open(PID_FILE, 'w') as f:
+            f.write(str(p.pid))
+            
+        # Wait a bit to see if it crashes immediately
+        time.sleep(3)
+        if p.poll() is not None:
+             return False, f"Failed to start (Exit code: {p.returncode})"
+             
+        return True, "Started"
+    except Exception as e:
+        return False, f"Error launching: {e}"
 
 def stop_bot():
     if os.path.exists(PID_FILE):
