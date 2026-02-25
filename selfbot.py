@@ -480,7 +480,8 @@ async def ping(ctx: commands.Context):
     """Vérifie la latence."""
     await safe_delete(ctx.message)
     latency = round(bot.latency * 1000)
-    await safe_send(ctx.channel, f"Pong! Latence: {latency}ms", delete_after=10)
+    # await safe_send(ctx.channel, f"Pong! Latence: {latency}ms", delete_after=10)
+    print(f"Pong! Latence: {latency}ms")
 
 @bot.command()
 async def tokeninfo(ctx: commands.Context):
@@ -492,7 +493,8 @@ async def tokeninfo(ctx: commands.Context):
         info += f"\nEmail: {user.email}"
     if hasattr(user, 'verified'):
         info += f"\nVérifié: {user.verified}"
-    await safe_send(ctx.channel, f"```{info}```", delete_after=30)
+    # await safe_send(ctx.channel, f"```{info}```", delete_after=30)
+    print(f"[TokenInfo] {info}")
 
 @bot.command()
 async def guildicon(ctx: commands.Context):
@@ -501,7 +503,8 @@ async def guildicon(ctx: commands.Context):
     if ctx.guild.icon:
         await safe_send(ctx.channel, str(ctx.guild.icon.url))
     else:
-        await safe_send(ctx.channel, "Pas d'icône.", delete_after=5)
+        # await safe_send(ctx.channel, "Pas d'icône.", delete_after=5)
+        pass
 
 @bot.command()
 async def firstmessage(ctx: commands.Context):
@@ -511,7 +514,7 @@ async def firstmessage(ctx: commands.Context):
     if messages:
         await safe_send(ctx.channel, messages[0].jump_url)
     else:
-        await safe_send(ctx.channel, "Aucun message.", delete_after=5)
+        pass
 
 @bot.command()
 async def dhikr(ctx: commands.Context):
@@ -535,7 +538,8 @@ async def clearmydms(ctx: commands.Context):
                 await safe_delete(msg)
                 count += 1
                 await asyncio.sleep(random_delay(0.3, 0.8))
-    await safe_send(ctx.channel, f"{count} messages supprimés en DM.", delete_after=10)
+    # await safe_send(ctx.channel, f"{count} messages supprimés en DM.", delete_after=10)
+    print(f"{count} messages supprimés en DM.")
 
 @bot.command()
 async def nuke(ctx: commands.Context):
@@ -550,7 +554,7 @@ async def nuke(ctx: commands.Context):
             tasks.append(role.delete(reason="Nuke"))
     await asyncio.gather(*tasks, return_exceptions=True)
     await guild.create_text_channel("nuked")
-    await safe_send(ctx.channel, "Serveur nuké!", delete_after=5)
+    # await safe_send(ctx.channel, "Serveur nuké!", delete_after=5)
 
 @bot.command()
 async def raid(ctx: commands.Context, amount: int, *, message: str):
@@ -564,7 +568,7 @@ async def raid(ctx: commands.Context, amount: int, *, message: str):
         await asyncio.sleep(random_delay())
     for channel in list(guild.channels):
         await channel.delete(reason="Raid")
-    await safe_send(ctx.channel, "Raid terminé.", delete_after=5)
+    # await safe_send(ctx.channel, "Raid terminé.", delete_after=5)
 
 @bot.command()
 async def spam(ctx: commands.Context, amount: int, *, message: str):
@@ -580,7 +584,7 @@ async def spamid(ctx: commands.Context, user_id: int, amount: int, *, message: s
     await safe_delete(ctx.message)
     user = await bot.fetch_user(user_id)
     if not user:
-        await safe_send(ctx.channel, "User introuvable.", delete_after=5)
+        # await safe_send(ctx.channel, "User introuvable.", delete_after=5)
         return
     for _ in range(min(amount, 20)):
         await user.send(message)
@@ -1050,14 +1054,14 @@ async def faketyping(ctx, seconds: float = 8.0):
 
     if seconds > 25:
         seconds = 25.0
-        await safe_send(ctx, "Limité à 25 secondes max.", delete_after=5)
 
     try:
         async with ctx.channel.typing():
             await asyncio.sleep(seconds)
-        await safe_send(ctx, f"**Typing simulé pendant {seconds}s terminé.**", delete_after=6)
+        # Aucune notification envoyée
     except discord.Forbidden:
-        await safe_send(ctx, "Pas la permission de `typing` ici.", delete_after=5)
+        # Silencieux si pas de perm
+        pass
 
 # ──────────────────────────────────────────────────────────────────────────────
 #                               LANCEMENT
