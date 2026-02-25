@@ -1,6 +1,18 @@
 import discord
 from discord.ext import commands
-from discord import ui
+try:
+    from discord import ui
+except ImportError:
+    # If discord.py-self is installed, ui might be missing or different
+    # But manager_bot NEEDS standard discord.py for slash commands/buttons
+    # We must ensure standard discord.py is used for this script.
+    print("CRITICAL ERROR: 'discord.ui' not found. You are likely running this with discord.py-self installed instead of discord.py.")
+    print("Please install standard discord.py for the manager bot:")
+    print("pip install discord.py")
+    print("Note: You cannot have both discord.py and discord.py-self in the same environment easily.")
+    print("For this setup, we will try to patch or warn.")
+    exit(1)
+
 import os
 import bot_manager
 import asyncio
@@ -29,27 +41,30 @@ class TokenModal(ui.Modal, title="Connexion Selfbot"):
     )
 
     async def on_submit(self, interaction: discord.Interaction):
+        # Acknowledge the interaction immediately to prevent timeout
+        await interaction.response.defer(ephemeral=True)
+        
         token = self.token_input.value.strip().strip('"').strip("'")
         
         # Check if already running
         if bot_manager.is_bot_running():
-            await interaction.response.send_message("Le selfbot est déjà en ligne !", ephemeral=True)
+            await interaction.followup.send("Le selfbot est déjà en ligne !", ephemeral=True)
             return
 
         # Start the bot
         success, message = bot_manager.start_bot(token)
         
         if success:
-            await interaction.response.send_message(f"✅ {message}", ephemeral=True)
+            await interaction.followup.send(f"✅ {message}", ephemeral=True)
         else:
-            await interaction.response.send_message(f"❌ Erreur: {message}", ephemeral=True)
+            await interaction.followup.send(f"❌ Erreur: {message}", ephemeral=True)
 
 class ControlView(ui.View):
     def __init__(self):
         super().__init__(timeout=None) # Persistent view
 
-    @ui.button(label="Connexion", style=discord.ButtonStyle.green, custom_id="selfbot_connect")
-    async def connect_button(self, interaction: discord.Interaction, button: ui.Button):
+    @discord.ui.button(label="Connexion", style=discord.ButtonStyle.green, custom_id="selfbot_connect")
+    async def connect_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         if bot_manager.is_bot_running():
             await interaction.response.send_message("Le selfbot est déjà en ligne !", ephemeral=True)
         else:
