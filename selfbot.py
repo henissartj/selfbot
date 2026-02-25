@@ -1076,7 +1076,10 @@ def ask_token():
 def run_bot(token: str):
     """Lance le bot."""
     try:
-        bot.run(token, bot=False)  # bot=False pour self-bot
+        # Check if we are already running in an event loop (unlikely for main process, but possible in some envs)
+        # For discord.py-self, run() is blocking.
+        # We need to ensure we don't pass 'bot' argument which is deprecated/removed in newer versions
+        bot.run(token)
     except discord.LoginFailure:
         logger.error("Token invalide.")
     except Exception as e:
