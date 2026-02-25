@@ -396,7 +396,9 @@ async def help_command(ctx: commands.Context, category: Optional[str] = None):
                 ".autoguild <nom> <nb> - Crée plusieurs serveurs",
                 ".massnick <base> - Change nick de tous aléatoirement",
                 ".massban - Ban tous les membres possibles",
-                ".masskick - Kick tous les membres possibles"
+                ".masskick - Kick tous les membres possibles",
+                ".massrole <action> <nb> [nom] - Crée/Supprime rôles",
+                ".channelspam <nb> [nom] - Crée plein de salons"
             ]
         },
         "antiraid": {
@@ -427,7 +429,8 @@ async def help_command(ctx: commands.Context, category: Optional[str] = None):
                 ".nickspam <nb> - Spam changement de nick",
                 ".statusspam <nb> <text> - Spam statut",
                 ".massreact <nb> <emoji> - Réagit aux derniers messages",
-                ".stealall - Vole tous les emojis du serveur"
+                ".stealall - Vole tous les emojis du serveur",
+                ".faketyping <sec> - Simule écriture"
             ]
         },
         "advanced": {
@@ -437,7 +440,8 @@ async def help_command(ctx: commands.Context, category: Optional[str] = None):
                 ".copyguild <guild_id> - Copie structure d'un serveur",
                 ".dmhistory <user_id> <limit> - Historique DM",
                 ".tokencheck - Vérifie validité token",
-                ".bypassverify <invite> - Rejoint en bypassant vérif"
+                ".bypassverify <invite> - Rejoint en bypassant vérif",
+                ".leaveall [confirm] - Quitte tous les serveurs (sauf whitelist)"
             ]
         }
     }
