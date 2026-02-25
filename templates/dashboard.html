@@ -3,7 +3,6 @@
 <head>
     <meta charset="UTF-8">
     <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='bouton.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
@@ -18,17 +17,21 @@
     <title>C2 // PANNEAU</title>
 </head>
 <body>
+    <div class="bg-pattern"></div>
     <div class="shahada-container">
         <div class="shahada">لَا إِلَٰهَ إِلَّا ٱللَّٰهُ مُحَمَّدٌ رَسُولُ ٱللَّٰهِ</div>
+        <div class="shahada-sub">ان الحكم الا لله</div>
     </div>
 
     <div class="container">
-        <h1>> PANNEAU DE CONTRÔLE</h1>
+        <h1>PANNEAU DE CONTRÔLE</h1>
         
         {% if user %}
         <div class="user-profile">
             {% if user.banner %}
             <div class="user-banner" style="background-image: url('https://cdn.discordapp.com/banners/{{ user.id }}/{{ user.banner }}.png?size=300');"></div>
+            {% else %}
+            <div class="user-banner" style="background-color: #5865F2;"></div>
             {% endif %}
             
             {% if user.avatar %}
@@ -39,101 +42,36 @@
             
             <div class="user-info">
                 <span class="user-name">{{ user.username }}{% if user.discriminator and user.discriminator != '0' %}#{{ user.discriminator }}{% endif %}</span>
-                <span class="user-status">CONNECTÉ EN TANT QUE {{ user.username }}</span>
+                <span class="user-status">Connecté en tant que {{ user.username }}</span>
             </div>
         </div>
         {% endif %}
 
         <div class="status-box">
-            <span class="status-label">ÉTAT :</span>
+            <span class="status-label">STATUT DU BOT</span>
             <span class="status-value {{ 'running' if is_running else 'stopped' }}">
                 {{ 'EN LIGNE' if is_running else 'HORS LIGNE' }}
             </span>
         </div>
 
-        <div class="actions-center" style="display: flex; justify-content: center; align-items: center; width: 100%; margin: 30px auto;">
-            <div class="toggle-container" style="margin: 0 auto;">
-              <div class="toggle-wrap">
-                <input class="toggle-input" id="holo-toggle" type="checkbox" {{ 'checked' if is_running else '' }} />
-                <label class="toggle-track" for="holo-toggle">
-                  <div class="track-lines">
-                    <div class="track-line"></div>
-                  </div>
-
-                  <div class="toggle-thumb">
-                    <div class="thumb-core"></div>
-                    <div class="thumb-inner"></div>
-                    <div class="thumb-scan"></div>
-                    <div class="thumb-particles">
-                      <div class="thumb-particle"></div>
-                      <div class="thumb-particle"></div>
-                      <div class="thumb-particle"></div>
-                      <div class="thumb-particle"></div>
-                      <div class="thumb-particle"></div>
-                    </div>
-                  </div>
-
-                  <div class="toggle-data">
-                    <div class="data-text off">OFF</div>
-                    <div class="data-text on">ON</div>
-                    <div class="status-indicator off"></div>
-                    <div class="status-indicator on"></div>
-                  </div>
-
-                  <div class="energy-rings">
-                    <div class="energy-ring"></div>
-                    <div class="energy-ring"></div>
-                    <div class="energy-ring"></div>
-                  </div>
-
-                  <div class="interface-lines">
-                    <div class="interface-line"></div>
-                    <div class="interface-line"></div>
-                    <div class="interface-line"></div>
-                    <div class="interface-line"></div>
-                    <div class="interface-line"></div>
-                    <div class="interface-line"></div>
-                  </div>
-
-                  <div class="toggle-reflection"></div>
-                  <div class="holo-glow"></div>
-                </label>
-              </div>
-            </div>
-
-            <script>
-                document.getElementById('holo-toggle').addEventListener('change', function() {
-                    const action = this.checked ? '/start' : '/stop';
-                    this.disabled = true;
-                    
-                    fetch(action, { 
-                        method: 'POST',
-                        headers: {
-                            'X-CSRFToken': '{{ csrf_token() }}'
-                        }
-                    })
-                    .then(response => {
-                        if (response.ok) {
-                            window.location.reload();
-                        } else {
-                            alert('Erreur: Le bot n\'a pas pu démarrer. Vérifiez votre token ou les logs.');
-                            window.location.reload(); // Reload to reset toggle state
-                        }
-                    })
-                    .catch(err => {
-                        console.error(err);
-                        alert('Erreur réseau.');
-                        window.location.reload();
-                    });
-                });
-            </script>
-        </div>
-
-        <div class="logout-container">
-            <a href="/logout" class="btn-logout">SE DÉCONNECTER</a>
+        <div class="actions-container">
+            <form method="POST" action="{{ url_for('toggle_bot') }}" style="margin: 0;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="action" value="{{ 'stop' if is_running else 'start' }}">
+                <button type="submit" class="control-btn {{ 'stop' if is_running else 'start' }}">
+                    {{ 'DÉSACTIVER' if is_running else 'ACTIVER' }}
+                </button>
+            </form>
+            
+            <form method="POST" action="{{ url_for('logout') }}" style="margin: 0;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="control-btn btn-logout">
+                    SE DÉCONNECTER
+                </button>
+            </form>
         </div>
     </div>
-
+    
     <div class="footer-logo">
         <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Logo">
         <div class="credits">CORE :: <span>L'EMPRISE</span> // <span>FAZER</span></div>
