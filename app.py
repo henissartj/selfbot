@@ -19,7 +19,10 @@ app.secret_key = os.environ.get('SECRET_KEY', 'super_secret_key_for_selfbot_1234
 def csrf_protect():
     if request.method == "POST":
         token = session.get('csrf_token')
-        if not token or token != request.headers.get('X-CSRFToken'):
+        header_token = request.headers.get('X-CSRFToken')
+        form_token = request.form.get('csrf_token')
+        
+        if not token or (token != header_token and token != form_token):
             # Allow login form without X-CSRFToken header if it uses form field (handled manually below)
             if request.endpoint == 'index':
                 pass 
@@ -189,7 +192,36 @@ def stop_bot():
         BOT_PROCESS = None
     return "Stopped", 200
 
-@app.route('/logout')
+@app.route('/toggle', methods=['POST'])
+def toggle_bot():
+    if 'token' not in session:
+        return redirect(url_for('index'))
+    
+    action = request.form.get('action')
+    global BOT_PROCESS
+    
+    if action == 'start':
+        if not (BOT_PROCESS and BOT_PROCESS.is_alive()):
+            token = session['token']
+            # Start bot in a separate process
+            BOT_PROCESS = multiprocessing.Process(target=run_bot_process, args=(token,))
+            BOT_PROCESS.daemon = True
+            BOT_PROCESS.start()
+            
+            # Wait a bit to see if it crashes immediately
+            time.sleep(1)
+    
+    elif action == 'stop':
+        if BOT_PROCESS and BOT_PROCESS.is_alive():
+            BOT_PROCESS.terminate()
+            BOT_PROCESS.join(timeout=1)
+            if BOT_PROCESS.is_alive():
+                BOT_PROCESS.kill()
+            BOT_PROCESS = None
+            
+    return redirect(url_for('dashboard'))
+
+@app.route('/logout', methods=['GET', 'POST'])
 def logout():
     session.pop('token', None)
     session.pop('site_access', None)
