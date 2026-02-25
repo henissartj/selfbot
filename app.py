@@ -8,6 +8,7 @@ import requests
 import secrets
 import time
 from token_manager import TokenManager
+import bot_manager
 
 app = Flask(__name__)
 token_manager = TokenManager()
@@ -59,47 +60,6 @@ def add_security_headers(response):
     response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
     response.headers['Content-Security-Policy'] = "default-src 'self' https://cdn.discordapp.com; script-src 'self' 'unsafe-inline' https://cdn.discordapp.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https://cdn.discordapp.com; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self';"
     return response
-
-# Global variable to store the bot process
-# We use a PID file to track the process across workers
-PID_FILE = "bot.pid"
-
-def is_bot_running():
-    if os.path.exists(PID_FILE):
-        try:
-            with open(PID_FILE, 'r') as f:
-                pid = int(f.read().strip())
-            
-            # Check if process exists
-            # On Windows, we can use psutil if available, or just assume it's running if file exists
-            # but for cross-platform (and Render/Linux), sending signal 0 checks existence
-            try:
-                os.kill(pid, 0)
-                return True
-            except OSError:
-                # Process not found
-                return False
-        except (ValueError, Exception):
-            return False
-    return False
-
-def run_bot_process(token):
-    # Wrapper to run the bot
-    # Write PID to file
-    with open(PID_FILE, 'w') as f:
-        f.write(str(os.getpid()))
-        
-    try:
-        selfbot.run_bot(token)
-    except Exception as e:
-        print(f"Bot process crashed: {e}", file=sys.stderr)
-    finally:
-        # Cleanup PID file on exit
-        if os.path.exists(PID_FILE):
-            try:
-                os.remove(PID_FILE)
-            except:
-                pass
 
 def get_discord_user_info(token):
     try:
@@ -181,7 +141,7 @@ def dashboard():
     if 'token' not in session:
         return redirect(url_for('index'))
     
-    is_running = is_bot_running()
+    is_running = bot_manager.is_bot_running()
         
     user_info = session.get('user_info', {})
     return render_template('dashboard.html', token=session['token'], is_running=is_running, user=user_info)
@@ -191,38 +151,17 @@ def start_bot():
     if 'token' not in session:
         return "Unauthorized", 401
     
-    if is_bot_running():
+    success, message = bot_manager.start_bot(session['token'])
+    if success:
+        return "Started", 200
+    elif message == "Already running":
         return "Already running", 200
-        
-    token = session['token']
-    # Start bot in a separate process
-    # Note: On Windows with Flask reloader, this might spawn recursively if not careful.
-    # But since we use multiprocessing.Process with target function, it should be fine.
-    p = multiprocessing.Process(target=run_bot_process, args=(token,))
-    p.daemon = True
-    p.start()
-    
-    # Wait a bit to see if it crashes immediately
-    time.sleep(2)
-    if not is_bot_running():
+    else:
         return "Failed to start", 500
-        
-    return "Started", 200
 
 @app.route('/stop', methods=['POST'])
 def stop_bot():
-    if os.path.exists(PID_FILE):
-        try:
-            with open(PID_FILE, 'r') as f:
-                pid = int(f.read().strip())
-            os.kill(pid, signal.SIGTERM) # Or SIGKILL if stubborn
-            # Wait for it to die
-            time.sleep(1)
-            if os.path.exists(PID_FILE):
-                os.remove(PID_FILE)
-        except:
-            pass
-            
+    bot_manager.stop_bot()
     return "Stopped", 200
 
 @app.route('/toggle', methods=['POST'])
@@ -233,38 +172,10 @@ def toggle_bot():
     action = request.form.get('action')
     
     if action == 'start':
-        if not is_bot_running():
-            token = session['token']
-            # Start bot in a separate process
-            p = multiprocessing.Process(target=run_bot_process, args=(token,))
-            p.daemon = True
-            p.start()
-            
-            # Wait a bit to see if it crashes immediately
-            time.sleep(2)
+        bot_manager.start_bot(session['token'])
     
     elif action == 'stop':
-        if os.path.exists(PID_FILE):
-            try:
-                with open(PID_FILE, 'r') as f:
-                    pid = int(f.read().strip())
-                os.kill(pid, signal.SIGTERM)
-                time.sleep(1)
-                # Force cleanup if still exists
-                if os.path.exists(PID_FILE):
-                    try:
-                        os.kill(pid, signal.SIGKILL)
-                    except:
-                        pass
-                    try:
-                        os.remove(PID_FILE)
-                    except:
-                        pass
-            except Exception as e:
-                print(f"Error stopping bot: {e}")
-                # Try to clean up file anyway
-                if os.path.exists(PID_FILE):
-                    os.remove(PID_FILE)
+        bot_manager.stop_bot()
             
     return redirect(url_for('dashboard'))
 
