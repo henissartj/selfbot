@@ -1094,8 +1094,7 @@ def run_bot(token: str):
         
         # Check if we are already running in an event loop (unlikely for main process, but possible in some envs)
         # For discord.py-self, run() is blocking.
-        # Use bot=False to bypass bot token check
-        bot.run(token, bot=False)
+        bot.run(token)
     except discord.LoginFailure as e:
         logger.error(f"Token invalide ou connexion refusée par Discord. Détails: {e}")
         # Discord.py-self may raise Improper token has been passed for user tokens if bot=True is inferred

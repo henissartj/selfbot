@@ -27,7 +27,9 @@ source $ENV_NAME/bin/activate
 
 echo "⬇️  Installation de discord.py-self..."
 pip install --upgrade pip
-pip install discord.py-self
+# Force uninstall standard discord.py if present
+pip uninstall -y discord.py
+pip install "discord.py-self==1.9.2"
 pip install requests aiohttp
 # PyNaCl est optionnel mais recommandé pour la voix
 pip install PyNaCl
