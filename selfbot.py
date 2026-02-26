@@ -1085,14 +1085,21 @@ def ask_token():
 def run_bot(token: str):
     """Lance le bot."""
     try:
+        # Debug token (securely)
+        masked_token = token[:5] + "..." + token[-5:] if len(token) > 10 else "******"
+        logger.info(f"Tentative de connexion avec le token (longueur: {len(token)}): {masked_token}")
+        
         # Check if we are already running in an event loop (unlikely for main process, but possible in some envs)
         # For discord.py-self, run() is blocking.
-        # We need to ensure we don't pass 'bot' argument which is deprecated/removed in newer versions
         bot.run(token)
-    except discord.LoginFailure:
-        logger.error("Token invalide.")
+    except discord.LoginFailure as e:
+        logger.error(f"Token invalide ou connexion refusée par Discord. Détails: {e}")
+        logger.error("Vérifiez que le token est correct et qu'il n'est pas expiré.")
+        logger.error("Si vous êtes sur un VPS, Discord a peut-être bloqué l'IP (Geo-lock).")
     except Exception as e:
         logger.error(f"Erreur démarrage: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
 
 if __name__ == "__main__":
     TOKEN = ask_token()
