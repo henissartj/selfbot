@@ -89,7 +89,8 @@ try:
         command_prefix=PREFIXES,
         self_bot=True,
         # intents=intents,  # Removed for discord.py-self compatibility
-        case_insensitive=True
+        case_insensitive=True,
+        help_command=None # Désactiver l'aide par défaut
     )
 except Exception:
     # Fallback si discord.py-self non installé (standard discord.py requires intents)
@@ -99,6 +100,10 @@ except Exception:
     bot = commands.Bot(
         command_prefix=PREFIXES,
         intents=intents,
+        self_bot=False, # Si on est ici, c'est probablement pas selfbot lib
+        case_insensitive=True,
+        help_command=None
+    )        intents=intents,
         case_insensitive=True
     )
 
@@ -1091,11 +1096,13 @@ def run_bot(token: str):
         
         # Check if we are already running in an event loop (unlikely for main process, but possible in some envs)
         # For discord.py-self, run() is blocking.
-        bot.run(token)
+        # Use bot=False to bypass bot token check
+        bot.run(token, bot=False)
     except discord.LoginFailure as e:
         logger.error(f"Token invalide ou connexion refusée par Discord. Détails: {e}")
+        # Discord.py-self may raise Improper token has been passed for user tokens if bot=True is inferred
+        # We explicitly set self_bot=True in bot setup, but let's double check if we can force it
         logger.error("Vérifiez que le token est correct et qu'il n'est pas expiré.")
-        logger.error("Si vous êtes sur un VPS, Discord a peut-être bloqué l'IP (Geo-lock).")
     except Exception as e:
         logger.error(f"Erreur démarrage: {e}")
         import traceback
