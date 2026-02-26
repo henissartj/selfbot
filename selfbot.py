@@ -103,8 +103,6 @@ except Exception:
         self_bot=False, # Si on est ici, c'est probablement pas selfbot lib
         case_insensitive=True,
         help_command=None
-    )        intents=intents,
-        case_insensitive=True
     )
 
 # Supprimer la commande help par défaut
