@@ -30,7 +30,7 @@ pip install --upgrade pip
 # Force uninstall standard discord.py if present
 pip uninstall -y discord.py
 pip install discord.py-self
-pip install requests aiohttp
+pip install requests aiohttp yt-dlp
 # PyNaCl est optionnel mais recommandé pour la voix
 pip install PyNaCl
 

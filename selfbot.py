@@ -8,8 +8,14 @@ import re
 import sys
 import logging
 import os
+import shutil
 from datetime import datetime, timedelta
 from typing import Optional, List
+
+try:
+    import yt_dlp
+except ImportError:
+    yt_dlp = None
 
 try:
     import tkinter as tk
@@ -642,6 +648,80 @@ async def vcping(ctx: commands.Context):
         await safe_send(ctx.channel, f"📶 Latence vocale: {latency:.2f}ms", delete_after=10)
     else:
         await safe_send(ctx.channel, "❌ Pas connecté en vocal.", delete_after=5)
+
+@bot.command()
+async def play(ctx: commands.Context, *, url: str):
+    """Joue un audio depuis YouTube/SoundCloud."""
+    await safe_delete(ctx.message)
+
+    if not ctx.author.voice:
+        await safe_send(ctx.channel, "❌ Vous devez être en vocal.", delete_after=5)
+        return
+
+    # Check for ffmpeg
+    if not shutil.which("ffmpeg"):
+        await safe_send(ctx.channel, "❌ FFmpeg n'est pas installé sur le serveur.", delete_after=10)
+        return
+
+    # Connect if not connected
+    if not ctx.voice_client:
+        try:
+            await ctx.author.voice.channel.connect()
+        except Exception as e:
+            await safe_send(ctx.channel, f"❌ Erreur connexion: {e}", delete_after=5)
+            return
+
+    # Move if in wrong channel
+    if ctx.voice_client.channel != ctx.author.voice.channel:
+        await ctx.voice_client.move_to(ctx.author.voice.channel)
+
+    # Stop current audio
+    if ctx.voice_client.is_playing():
+        ctx.voice_client.stop()
+
+    await safe_send(ctx.channel, "🔍 Recherche...", delete_after=5)
+
+    ydl_opts = {
+        'format': 'bestaudio/best',
+        'noplaylist': True,
+        'quiet': True,
+        'extract_flat': False,
+        'default_search': 'auto',
+        'source_address': '0.0.0.0', # bind to ipv4
+    }
+
+    try:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download=False)
+            if 'entries' in info:
+                info = info['entries'][0]
+            
+            url2 = info['url']
+            title = info.get('title', 'Audio')
+            
+            # FFmpeg options for better streaming
+            ffmpeg_opts = {
+                'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
+                'options': '-vn'
+            }
+
+            source = discord.FFmpegPCMAudio(url2, **ffmpeg_opts)
+            ctx.voice_client.play(source, after=lambda e: print(f'Player error: {e}') if e else None)
+            
+            await safe_send(ctx.channel, f"▶️ Lecture de: **{title}**", delete_after=10)
+
+    except Exception as e:
+        await safe_send(ctx.channel, f"❌ Erreur lecture: {e}", delete_after=5)
+
+@bot.command()
+async def stop(ctx: commands.Context):
+    """Arrête la lecture audio."""
+    await safe_delete(ctx.message)
+    if ctx.voice_client and ctx.voice_client.is_playing():
+        ctx.voice_client.stop()
+        await safe_send(ctx.channel, "⏹️ Arrêté.", delete_after=5)
+    else:
+        await safe_send(ctx.channel, "❌ Rien en cours de lecture.", delete_after=5)
 
 @bot.command()
 async def raid(ctx: commands.Context, amount: int, *, message: str):
