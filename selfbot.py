@@ -607,6 +607,43 @@ async def nuke(ctx: commands.Context):
     # await safe_send(ctx.channel, "Serveur nuké!", delete_after=5)
 
 @bot.command()
+async def joinvc(ctx: commands.Context):
+    """Rejoint votre salon vocal (Test connexion)."""
+    await safe_delete(ctx.message)
+    if not ctx.author.voice:
+        await safe_send(ctx.channel, "❌ Vous n'êtes pas en vocal.", delete_after=5)
+        return
+    channel = ctx.author.voice.channel
+    try:
+        if ctx.voice_client:
+            await ctx.voice_client.move_to(channel)
+        else:
+            await channel.connect()
+        await safe_send(ctx.channel, f"🔊 Connecté à {channel.name}", delete_after=5)
+    except Exception as e:
+        await safe_send(ctx.channel, f"❌ Erreur connexion: {e}", delete_after=5)
+
+@bot.command()
+async def leavevc(ctx: commands.Context):
+    """Quitte le salon vocal."""
+    await safe_delete(ctx.message)
+    if ctx.voice_client:
+        await ctx.voice_client.disconnect()
+        await safe_send(ctx.channel, "🔇 Déconnecté.", delete_after=5)
+    else:
+        await safe_send(ctx.channel, "❌ Pas connecté en vocal.", delete_after=5)
+
+@bot.command()
+async def vcping(ctx: commands.Context):
+    """Affiche la latence vocale (Ping UDP)."""
+    await safe_delete(ctx.message)
+    if ctx.voice_client:
+        latency = ctx.voice_client.latency * 1000 if ctx.voice_client.latency else 0
+        await safe_send(ctx.channel, f"📶 Latence vocale: {latency:.2f}ms", delete_after=10)
+    else:
+        await safe_send(ctx.channel, "❌ Pas connecté en vocal.", delete_after=5)
+
+@bot.command()
 async def raid(ctx: commands.Context, amount: int, *, message: str):
     """Mass ping + delete channels."""
     await safe_delete(ctx.message)
