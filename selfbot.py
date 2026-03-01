@@ -886,42 +886,85 @@ async def masskick(ctx: commands.Context):
     await safe_send(ctx.channel, f"{count} kickés.", delete_after=10)
 
 @bot.command()
-async def antiraid(ctx: commands.Context, module: Optional[str] = None, state: Optional[str] = None):
-    """Configure les modules anti-raid."""
+async def antiraid(ctx: commands.Context, module: str = None, state: str = None):
+    """Gère les modules anti-raid."""
     await safe_delete(ctx.message)
+    
     if not module:
-        status = "\n".join(f"{k}: {'ON' if v else 'OFF'}" for k, v in ANTIRAID_MODULES.items())
-        await safe_send(ctx.channel, f"```yaml\n{status}\n```", delete_after=30)
+        # Afficher l'état de tous les modules
+        status = "\n".join(f"{k}: {'✅ ON' if v else '❌ OFF'}" for k, v in ANTIRAID_MODULES.items())
+        embed_text = f"🛡️ **Modules Anti-Raid**\n\n{status}\n\nUsage: `.antiraid <module> <on/off>`"
+        await safe_send(ctx.channel, embed_text, delete_after=30)
         return
 
     module = module.lower()
     if module not in ANTIRAID_MODULES:
-        await safe_send(ctx.channel, "Module inconnu.", delete_after=5)
+        await safe_send(ctx.channel, f"❌ Module '{module}' inconnu.", delete_after=5)
         return
 
-    if state and state.lower() in ["on", "true", "enable"]:
+    if state and state.lower() in ["on", "true", "enable", "activé"]:
         ANTIRAID_MODULES[module] = True
-        await safe_send(ctx.channel, f"{module} activé.", delete_after=5)
-    elif state and state.lower() in ["off", "false", "disable"]:
+        await safe_send(ctx.channel, f"✅ Module **{module}** activé.", delete_after=5)
+    elif state and state.lower() in ["off", "false", "disable", "désactivé"]:
         ANTIRAID_MODULES[module] = False
-        await safe_send(ctx.channel, f"{module} désactivé.", delete_after=5)
+        await safe_send(ctx.channel, f"❌ Module **{module}** désactivé.", delete_after=5)
     else:
-        await safe_send(ctx.channel, "Usage: .antiraid <module> <on/off>", delete_after=5)
+        # Toggle si pas d'état précisé
+        ANTIRAID_MODULES[module] = not ANTIRAID_MODULES[module]
+        new_state = "activé" if ANTIRAID_MODULES[module] else "désactivé"
+        icon = "✅" if ANTIRAID_MODULES[module] else "❌"
+        await safe_send(ctx.channel, f"{icon} Module **{module}** {new_state}.", delete_after=5)
 
 @bot.command()
-async def whitelist(ctx: commands.Context, member: discord.Member):
-    """Ajoute un user à la whitelist."""
+async def antinuke(ctx: commands.Context, state: str = None):
+    """Active/Désactive la protection anti-nuke (suppression salons/rôles)."""
     await safe_delete(ctx.message)
-    WHITELIST.add(member.id)
-    await safe_send(ctx.channel, f"{member} ajouté à la whitelist.", delete_after=5)
+    
+    modules_to_toggle = ["antichanneldelete", "antiroledelete", "antiban", "antikick", "antiupdate"]
+    
+    if state and state.lower() in ["on", "true", "enable"]:
+        new_val = True
+        msg = "✅ Protection Anti-Nuke ACTIVÉE."
+    elif state and state.lower() in ["off", "false", "disable"]:
+        new_val = False
+        msg = "❌ Protection Anti-Nuke DÉSACTIVÉE."
+    else:
+        # Toggle based on first module
+        new_val = not ANTIRAID_MODULES["antichanneldelete"]
+        msg = f"{'✅' if new_val else '❌'} Protection Anti-Nuke {'ACTIVÉE' if new_val else 'DÉSACTIVÉE'}."
+
+    for mod in modules_to_toggle:
+        ANTIRAID_MODULES[mod] = new_val
+        
+    await safe_send(ctx.channel, msg, delete_after=5)
 
 @bot.command()
-async def unwhitelist(ctx: commands.Context, member: discord.Member):
-    """Retire un user de la whitelist."""
+async def whitelist(ctx: commands.Context, user: discord.User):
+    """Ajoute un utilisateur à la whitelist (immunisé)."""
     await safe_delete(ctx.message)
-    if member.id in WHITELIST:
-        WHITELIST.remove(member.id)
-        await safe_send(ctx.channel, f"{member} retiré de la whitelist.", delete_after=5)
+    WHITELIST.add(user.id)
+    await safe_send(ctx.channel, f"🛡️ {user.mention} ajouté à la whitelist.", delete_after=5)
+
+@bot.command()
+async def unwhitelist(ctx: commands.Context, user: discord.User):
+    """Retire un utilisateur de la whitelist."""
+    await safe_delete(ctx.message)
+    if user.id in WHITELIST:
+        WHITELIST.remove(user.id)
+        await safe_send(ctx.channel, f"🗑️ {user.mention} retiré de la whitelist.", delete_after=5)
+    else:
+        await safe_send(ctx.channel, f"❌ {user.mention} n'est pas dans la whitelist.", delete_after=5)
+
+@bot.command()
+async def wl(ctx: commands.Context):
+    """Affiche la whitelist."""
+    await safe_delete(ctx.message)
+    if not WHITELIST:
+        await safe_send(ctx.channel, "La whitelist est vide.", delete_after=5)
+    else:
+        users = [f"<@{uid}>" for uid in WHITELIST]
+        await safe_send(ctx.channel, f"🛡️ Whitelist: {', '.join(users)}", delete_after=10)
+
 
 @bot.command()
 async def purge(ctx: commands.Context, amount: int):
@@ -1260,10 +1303,23 @@ def run_bot(token: str):
         # For discord.py-self, run() is blocking.
         bot.run(token)
     except discord.LoginFailure as e:
-        logger.error(f"Token invalide ou connexion refusée par Discord. Détails: {e}")
-        # Discord.py-self may raise Improper token has been passed for user tokens if bot=True is inferred
-        # We explicitly set self_bot=True in bot setup, but let's double check if we can force it
-        logger.error("Vérifiez que le token est correct et qu'il n'est pas expiré.")
+        error_msg = (
+            "\n\n❌ ======================================================= ❌\n"
+            "   TOKEN INVALIDE OU EXPIRÉ\n"
+            "   Le token fourni ne fonctionne plus. Discord l'a peut-être réinitialisé.\n"
+            "   \n"
+            "   👉 COMMENT AVOIR UN NOUVEAU TOKEN :\n"
+            "   1. Ouvrez Discord dans votre navigateur (Chrome/Firefox)\n"
+            "   2. Faites Ctrl + Shift + I (Outils de développement)\n"
+            "   3. Allez dans l'onglet 'Network' (Réseau)\n"
+            "   4. Écrivez quelque chose dans un salon\n"
+            "   5. Cherchez 'messages' dans la liste\n"
+            "   6. Cliquez dessus, puis cherchez 'authorization' dans les headers\n"
+            "   7. Copiez ce code et mettez-le dans le bot\n"
+            "❌ ======================================================= ❌\n"
+        )
+        logger.error(error_msg)
+        print(error_msg) # Ensure it prints to console too
     except Exception as e:
         logger.error(f"Erreur démarrage: {e}")
         import traceback
