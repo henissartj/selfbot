@@ -9,6 +9,7 @@ import sys
 import logging
 import os
 import shutil
+import subprocess
 from datetime import datetime, timedelta
 from typing import Optional, List
 
@@ -447,6 +448,8 @@ async def help_command(ctx: commands.Context, category: Optional[str] = None):
             "title": "Avancé / Outils",
             "icon": "🔧",
             "cmds": [
+                ".restart - Redémarre le bot",
+                ".update - Met à jour le code et redémarre",
                 ".copyguild <guild_id> - Copie structure d'un serveur",
                 ".dmhistory <user_id> <limit> - Historique DM",
                 ".tokencheck - Vérifie validité token",
@@ -1356,6 +1359,32 @@ def run_bot(token: str):
         logger.error(f"Erreur démarrage: {e}")
         import traceback
         logger.error(traceback.format_exc())
+
+@bot.command()
+async def restart(ctx: commands.Context):
+    """Redémarre le bot (utile après update)."""
+    await safe_delete(ctx.message)
+    await safe_send(ctx.channel, "🔄 Redémarrage en cours...", delete_after=5)
+    os.execv(sys.executable, [sys.executable] + sys.argv)
+
+@bot.command()
+async def update(ctx: commands.Context):
+    """Met à jour le code (git pull) et redémarre."""
+    await safe_delete(ctx.message)
+    await safe_send(ctx.channel, "⬇️ Mise à jour en cours...", delete_after=10)
+    try:
+        # Tente un git pull
+        process = subprocess.Popen(["git", "pull"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        stdout, stderr = process.communicate()
+        
+        if process.returncode == 0:
+            await safe_send(ctx.channel, f"✅ Mise à jour réussie:\n```{stdout.decode()[:1900]}```", delete_after=10)
+            await safe_send(ctx.channel, "🔄 Redémarrage...", delete_after=5)
+            os.execv(sys.executable, [sys.executable] + sys.argv)
+        else:
+            await safe_send(ctx.channel, f"❌ Erreur Git:\n```{stderr.decode()[:1900]}```", delete_after=10)
+    except Exception as e:
+        await safe_send(ctx.channel, f"❌ Erreur Update: {e}", delete_after=10)
 
 if __name__ == "__main__":
     TOKEN = ask_token()
