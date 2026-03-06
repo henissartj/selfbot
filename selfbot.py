@@ -511,8 +511,24 @@ async def ping(ctx: commands.Context):
 async def stream(ctx: commands.Context, *, text: str):
     """Change le statut en Streaming."""
     await safe_delete(ctx.message)
-    await bot.change_presence(activity=discord.Streaming(name=text, url="https://twitch.tv/ninja"))
-    await safe_send(ctx.channel, f"🟣 Statut Streaming activé: **{text}**", delete_after=5)
+    try:
+        # Utilisation d'une URL Twitch valide pour que le statut Streaming fonctionne
+        # On force aussi le statut 'dnd' (rouge) ou 'online' pour être sûr que ça s'affiche
+        activity = discord.Streaming(name=text, url="https://twitch.tv/monstercat")
+        await bot.change_presence(activity=activity, status=discord.Status.dnd)
+        await safe_send(ctx.channel, f"🟣 Statut Streaming activé: **{text}**", delete_after=5)
+    except Exception as e:
+        await safe_send(ctx.channel, f"❌ Erreur Stream: {e}", delete_after=10)
+
+@bot.command()
+async def stopstream(ctx: commands.Context):
+    """Arrête le statut Streaming."""
+    await safe_delete(ctx.message)
+    try:
+        await bot.change_presence(activity=None, status=discord.Status.online)
+        await safe_send(ctx.channel, "⚪ Statut normal rétabli.", delete_after=5)
+    except Exception as e:
+        await safe_send(ctx.channel, f"❌ Erreur StopStream: {e}", delete_after=10)
 
 @bot.command()
 async def earrape(ctx: commands.Context):
