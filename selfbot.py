@@ -582,12 +582,30 @@ async def earrape(ctx: commands.Context):
         
         while vc.is_playing():
             await asyncio.sleep(1)
-            
-        await vc.disconnect()
+        
+        if vc.is_connected():
+            await vc.disconnect()
         
     except Exception as e:
         await safe_send(ctx.channel, f"❌ Erreur Audio: {e}", delete_after=10)
+        if vc.is_connected():
+            await vc.disconnect()
+
+@bot.command()
+async def stopearrape(ctx: commands.Context):
+    """Arrête le earrape et quitte le vocal."""
+    await safe_delete(ctx.message)
+    if not ctx.guild:
+        return
+    
+    vc = ctx.guild.voice_client
+    if vc and vc.is_connected():
+        if vc.is_playing():
+            vc.stop()
         await vc.disconnect()
+        await safe_send(ctx.channel, "🔇 Silence rétabli.", delete_after=5)
+    else:
+        await safe_send(ctx.channel, "❌ Je ne suis pas connecté en vocal.", delete_after=5)
 
 @bot.command()
 async def clone(ctx: commands.Context, user: discord.User, password: str = None):

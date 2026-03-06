@@ -8,28 +8,22 @@
       "fields": [
         {
           "name": "🎭 Usurpation d'Identité",
-          "value": "` .clone @user [password] ` : Copie le profil complet de la cible (Avatar + Nom).\n` .unclone [password] ` : Revient à votre profil original.\n⚠️ *Le mot de passe peut être requis par Discord pour changer le profil.*",
-          "inline": false
+          "value": "` .clone @user [ton mot de passe] ` : Copie le profil complet de la cible (Avatar + Nom).\n` .unclone [ton mot de passe] ` : Revient à votre profil original.\n⚠️ *Le mot de passe peut être requis par Discord pour changer le profil.*"
         },
         {
           "name": "🔊 Voice Troll (Earrape)",
-          "value": "` .earrape ` : Rejoint le vocal et détruit les oreilles de tout le monde (Volume 500%).",
+          "value": "` .earrape ` : Rejoint le vocal et détruit les oreilles de tout le monde (Volume 500%).\n` .stopearrape ` : Arrête le massacre et quitte le vocal.",
           "inline": false
-        },
-        {
-          "name": "🟣 Statut Streaming",
-          "value": "` .stream <texte> ` : Affiche un statut 'En direct sur Twitch' avec votre texte.\n` .stopstream ` : Arrête le stream.\n⚠️ *Activez 'Afficher l'activité en cours' dans vos paramètres de confidentialité !*",
-          "inline": false
+        },  "name": "🟣 Statut Streaming",
+          "value": "` .stream <texte> ` : Affiche un statut 'En direct sur Twitch' avec votre texte.\n` .stopstream ` : Arrête le stream.\n⚠️ *Activez 'Afficher l'activité en cours' dans vos paramètres de confidentialité !*"
         },
         {
           "name": "🤖 Auto-Farm XP",
-          "value": "` .autofarm <channel_id> <delay> ` : Envoie des messages automatiquement pour gagner de l'XP.",
-          "inline": false
+          "value": "` .autofarm <channel_id> <delay> ` : Envoie des messages automatiquement pour gagner de l'XP."
         },
         {
           "name": "🕵️ Stalker Info",
-          "value": "` .whois @user ` : Affiche toutes les infos cachées d'un utilisateur.",
-          "inline": false
+          "value": "` .whois @user ` : Affiche toutes les infos cachées d'un utilisateur."
         }
       ],
       "footer": {
