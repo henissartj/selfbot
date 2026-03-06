@@ -416,7 +416,8 @@ async def help_command(ctx: commands.Context, category: Optional[str] = None):
             "title": "Anti-Raid / Protection",
             "icon": "🛡️",
             "cmds": [
-                ".antiraid [module] [on/off] - Configure modules",
+                ".antiraid - Affiche la liste et l'état des modules",
+                ".antiraid <module> <on/off> - Active/Désactive un module",
                 ".whitelist <@user> - Ajoute à la whitelist",
                 ".unwhitelist <@user> - Retire de la whitelist"
             ]
@@ -934,7 +935,8 @@ async def antiraid(ctx: commands.Context, module: str = None, state: str = None)
 
     module = module.lower()
     if module not in ANTIRAID_MODULES:
-        await safe_send(ctx.channel, f"❌ Module '{module}' inconnu.", delete_after=5)
+        modules_list = ", ".join(ANTIRAID_MODULES.keys())
+        await safe_send(ctx.channel, f"❌ Module '{module}' inconnu. Dispo: {modules_list}", delete_after=10)
         return
 
     if state and state.lower() in ["on", "true", "enable", "activé"]:
