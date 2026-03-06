@@ -563,8 +563,8 @@ async def earrape(ctx: commands.Context):
         await vc.disconnect()
 
 @bot.command()
-async def clone(ctx: commands.Context, user: discord.User):
-    """Copie le profil d'un utilisateur."""
+async def clone(ctx: commands.Context, user: discord.User, password: str = None):
+    """Copie le profil d'un utilisateur. Usage: .clone @user [password]"""
     await safe_delete(ctx.message)
     
     # Sauvegarde du profil actuel
@@ -580,14 +580,18 @@ async def clone(ctx: commands.Context, user: discord.User):
         new_avatar = await user.avatar.read() if user.avatar else None
         
         # Application
-        await bot.user.edit(username=user.name, avatar=new_avatar) # password=... si nécessaire, mais souvent pas besoin en selfbot récent
+        # Note: password requis pour changer username/avatar sur certains comptes sécurisés
+        await bot.user.edit(username=user.name, avatar=new_avatar, password=password)
         await safe_send(ctx.channel, f"👤 Identité volée: **{user.name}**", delete_after=5)
     except Exception as e:
-        await safe_send(ctx.channel, f"❌ Erreur Clone: {e}", delete_after=10)
+        if "password" in str(e).lower():
+             await safe_send(ctx.channel, "❌ Mot de passe requis pour changer le profil. Usage: `.clone @user votre_mdp`", delete_after=10)
+        else:
+            await safe_send(ctx.channel, f"❌ Erreur Clone: {e}", delete_after=10)
 
 @bot.command()
-async def unclone(ctx: commands.Context):
-    """Restaure le profil original."""
+async def unclone(ctx: commands.Context, password: str = None):
+    """Restaure le profil original. Usage: .unclone [password]"""
     await safe_delete(ctx.message)
     global original_profile
     
@@ -596,11 +600,14 @@ async def unclone(ctx: commands.Context):
         return
         
     try:
-        await bot.user.edit(username=original_profile["name"], avatar=original_profile["avatar"])
+        await bot.user.edit(username=original_profile["name"], avatar=original_profile["avatar"], password=password)
         original_profile = {} # Reset
         await safe_send(ctx.channel, "👤 Identité restaurée.", delete_after=5)
     except Exception as e:
-        await safe_send(ctx.channel, f"❌ Erreur Unclone: {e}", delete_after=10)
+        if "password" in str(e).lower():
+             await safe_send(ctx.channel, "❌ Mot de passe requis. Usage: `.unclone votre_mdp`", delete_after=10)
+        else:
+            await safe_send(ctx.channel, f"❌ Erreur Unclone: {e}", delete_after=10)
 
 @bot.command()
 async def autofarm(ctx: commands.Context, channel_id: int, delay: int = 60):
