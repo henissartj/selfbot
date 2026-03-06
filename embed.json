@@ -1,0 +1,44 @@
+{
+  "content": null,
+  "embeds": [
+    {
+      "title": "🔥 MISE À JOUR MAJEURE - SELFBOT 2.0 🔥",
+      "description": "Nouvelles fonctionnalités troll et utilitaires ajoutées !",
+      "color": 16711680,
+      "fields": [
+        {
+          "name": "🎭 Usurpation d'Identité",
+          "value": "` .clone @user [password] ` : Copie le profil complet de la cible (Avatar + Nom).\n` .unclone [password] ` : Revient à votre profil original.\n⚠️ *Le mot de passe peut être requis par Discord pour changer le profil.*",
+          "inline": false
+        },
+        {
+          "name": "🔊 Voice Troll (Earrape)",
+          "value": "` .earrape ` : Rejoint le vocal et détruit les oreilles de tout le monde (Volume 500%).",
+          "inline": false
+        },
+        {
+          "name": "🟣 Statut Streaming",
+          "value": "` .stream <texte> ` : Affiche un statut 'En direct sur Twitch' avec votre texte.\n` .stopstream ` : Arrête le stream.\n⚠️ *Activez 'Afficher l'activité en cours' dans vos paramètres de confidentialité !*",
+          "inline": false
+        },
+        {
+          "name": "🤖 Auto-Farm XP",
+          "value": "` .autofarm <channel_id> <delay> ` : Envoie des messages automatiquement pour gagner de l'XP.",
+          "inline": false
+        },
+        {
+          "name": "🕵️ Stalker Info",
+          "value": "` .whois @user ` : Affiche toutes les infos cachées d'un utilisateur.",
+          "inline": false
+        }
+      ],
+      "footer": {
+        "text": "Faites .update pour obtenir la mise à jour !"
+      },
+      "thumbnail": {
+        "url": "https://cdn.discordapp.com/emojis/867768856263884810.gif"
+      }
+    }
+  ],
+  "attachments": []
+}
