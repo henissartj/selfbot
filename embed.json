@@ -14,7 +14,9 @@
           "name": "🔊 Voice Troll (Earrape)",
           "value": "` .earrape ` : Rejoint le vocal et détruit les oreilles de tout le monde (Volume 500%).\n` .stopearrape ` : Arrête le massacre et quitte le vocal.",
           "inline": false
-        },  "name": "🟣 Statut Streaming",
+        },
+        {
+          "name": "🟣 Statut Streaming",
           "value": "` .stream <texte> ` : Affiche un statut 'En direct sur Twitch' avec votre texte.\n` .stopstream ` : Arrête le stream.\n⚠️ *Activez 'Afficher l'activité en cours' dans vos paramètres de confidentialité !*"
         },
         {

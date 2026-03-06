@@ -40,23 +40,23 @@ TOKEN = None
 
 # Configuration Anti-Raid (modules activables/désactivables)
 ANTIRAID_MODULES = {
-    "antispam": True,           # Anti-spam rapide
-    "antimassmention": True,    # Anti-mass mentions
-    "antichannelcreate": True,  # Anti-création de salons
-    "antichanneldelete": True,  # Anti-suppression de salons
-    "antirolecreate": True,     # Anti-création de rôles
-    "antiroledelete": True,     # Anti-suppression de rôles
-    "antibotjoin": True,        # Anti-ajout de bots
-    "antiban": True,            # Anti-ban non autorisé
-    "antiunban": True,          # Anti-unban non autorisé
-    "antikick": True,           # Anti-kick non autorisé
-    "antiwebhook": True,        # Anti-création de webhooks
-    "antiupdate": True,         # Anti-modification du serveur
-    "antieveryone": True,       # Anti-@everyone/@here
-    "antilink": True,           # Anti-liens
-    "antitoken": True,          # Anti-leak de tokens
-    "antirank": True,           # Anti-ajout de rôles admin
-    "protected": True,          # Protection globale
+    "antispam": False,           # Anti-spam rapide
+    "antimassmention": False,    # Anti-mass mentions
+    "antichannelcreate": False,  # Anti-création de salons
+    "antichanneldelete": False,  # Anti-suppression de salons
+    "antirolecreate": False,     # Anti-création de rôles
+    "antiroledelete": False,     # Anti-suppression de rôles
+    "antibotjoin": False,        # Anti-ajout de bots
+    "antiban": False,            # Anti-ban non autorisé
+    "antiunban": False,          # Anti-unban non autorisé
+    "antikick": False,           # Anti-kick non autorisé
+    "antiwebhook": False,        # Anti-création de webhooks
+    "antiupdate": False,         # Anti-modification du serveur
+    "antieveryone": False,       # Anti-@everyone/@here
+    "antilink": False,           # Anti-liens
+    "antitoken": False,          # Anti-leak de tokens
+    "antirank": False,           # Anti-ajout de rôles admin
+    "protected": False,          # Protection globale
 }
 
 # Whitelist des utilisateurs protégés (IDs)
