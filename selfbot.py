@@ -65,6 +65,12 @@ WHITELIST: set[int] = set()
 # Cache pour anti-spam (par user ID)
 spam_cache: collections.defaultdict = collections.defaultdict(list)
 
+# Stockage pour le clone/unclone
+original_profile = {}
+
+# Stockage pour l'autofarm
+autofarm_tasks = {}
+
 # Logging setup
 logging.basicConfig(
     level=logging.INFO,
@@ -436,6 +442,12 @@ async def help_command(ctx: commands.Context, category: Optional[str] = None):
             "title": "Troll / Fun",
             "icon": "🤡",
             "cmds": [
+                ".stream <texte> - Statut Streaming",
+                ".earrape - Détruit les oreilles en vocal",
+                ".clone <@user> - Copie le profil",
+                ".unclone - Restaure le profil",
+                ".autofarm <channel> <delay> - XP Farming",
+                ".whois <@user> - Infos utilisateur",
                 ".ghostping <nb> <@user> - Mentions qui se suppriment",
                 ".reactspam <msg_id> <emoji> <nb> - Spam réactions",
                 ".nickspam <nb> - Spam changement de nick",
@@ -493,8 +505,177 @@ async def ping(ctx: commands.Context):
     """Vérifie la latence."""
     await safe_delete(ctx.message)
     latency = round(bot.latency * 1000)
-    # await safe_send(ctx.channel, f"Pong! Latence: {latency}ms", delete_after=10)
-    print(f"Pong! Latence: {latency}ms")
+    await safe_send(ctx.channel, f"🏓 Pong! Latence: {latency}ms", delete_after=5)
+
+@bot.command()
+async def stream(ctx: commands.Context, *, text: str):
+    """Change le statut en Streaming."""
+    await safe_delete(ctx.message)
+    await bot.change_presence(activity=discord.Streaming(name=text, url="https://twitch.tv/ninja"))
+    await safe_send(ctx.channel, f"🟣 Statut Streaming activé: **{text}**", delete_after=5)
+
+@bot.command()
+async def earrape(ctx: commands.Context):
+    """Rejoint le vocal et détruit les oreilles."""
+    await safe_delete(ctx.message)
+    if not ctx.guild:
+        return
+    
+    if not ctx.author.voice:
+        await safe_send(ctx.channel, "❌ Tu n'es pas en vocal.", delete_after=5)
+        return
+
+    try:
+        vc = await ctx.author.voice.channel.connect()
+    except discord.ClientException:
+        # Déjà connecté
+        vc = ctx.guild.voice_client
+    
+    # URL d'un son earrape (exemple générique ou bruit blanc via ffmpeg)
+    # On utilise ffmpeg pour générer du bruit très fort si pas de fichier
+    # "anoisesrc=a=0.5:c=white:d=10" -> Bruit blanc 10 secondes
+    # volume=100 -> Volume max
+    
+    ffmpeg_options = {
+        'options': '-vn',
+        "before_options": "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5"
+    }
+    
+    # On tente de jouer un son fort généré
+    # Si ffmpeg n'est pas là, ça va fail, mais c'est géré par le try/except global du bot normalement
+    try:
+        # Source bruit blanc violent
+        source = discord.FFmpegPCMAudio(
+            "anoisesrc=a=1:c=white:d=10",
+            before_options="-f lavfi", # Input format lavfi pour le générateur
+            options="-af volume=50" # Volume boost
+        )
+        vc.play(source)
+        await safe_send(ctx.channel, "🔊 RIP les oreilles...", delete_after=5)
+        
+        while vc.is_playing():
+            await asyncio.sleep(1)
+            
+        await vc.disconnect()
+        
+    except Exception as e:
+        await safe_send(ctx.channel, f"❌ Erreur Audio: {e}", delete_after=10)
+        await vc.disconnect()
+
+@bot.command()
+async def clone(ctx: commands.Context, user: discord.User):
+    """Copie le profil d'un utilisateur."""
+    await safe_delete(ctx.message)
+    
+    # Sauvegarde du profil actuel
+    global original_profile
+    if not original_profile:
+        original_profile = {
+            "name": bot.user.name,
+            "avatar": await bot.user.avatar.read() if bot.user.avatar else None
+        }
+    
+    try:
+        # Récupération avatar cible
+        new_avatar = await user.avatar.read() if user.avatar else None
+        
+        # Application
+        await bot.user.edit(username=user.name, avatar=new_avatar) # password=... si nécessaire, mais souvent pas besoin en selfbot récent
+        await safe_send(ctx.channel, f"👤 Identité volée: **{user.name}**", delete_after=5)
+    except Exception as e:
+        await safe_send(ctx.channel, f"❌ Erreur Clone: {e}", delete_after=10)
+
+@bot.command()
+async def unclone(ctx: commands.Context):
+    """Restaure le profil original."""
+    await safe_delete(ctx.message)
+    global original_profile
+    
+    if not original_profile:
+        await safe_send(ctx.channel, "❌ Aucun profil sauvegardé.", delete_after=5)
+        return
+        
+    try:
+        await bot.user.edit(username=original_profile["name"], avatar=original_profile["avatar"])
+        original_profile = {} # Reset
+        await safe_send(ctx.channel, "👤 Identité restaurée.", delete_after=5)
+    except Exception as e:
+        await safe_send(ctx.channel, f"❌ Erreur Unclone: {e}", delete_after=10)
+
+@bot.command()
+async def autofarm(ctx: commands.Context, channel_id: int, delay: int = 60):
+    """Lance/Arrête le farming d'XP dans un salon."""
+    await safe_delete(ctx.message)
+    
+    task_key = f"farm_{channel_id}"
+    
+    if task_key in autofarm_tasks:
+        # Arrêt
+        task = autofarm_tasks.pop(task_key)
+        task.cancel()
+        await safe_send(ctx.channel, f"🛑 Autofarm arrêté dans <#{channel_id}>.", delete_after=5)
+    else:
+        # Démarrage
+        channel = bot.get_channel(channel_id)
+        if not channel:
+            await safe_send(ctx.channel, "❌ Salon introuvable.", delete_after=5)
+            return
+            
+        async def farm_loop():
+            messages = [
+                "Hmm intéressant", "C'est clair", "Je vois", "Exactement", 
+                "Pourquoi pas ?", "Vraiment ?", "Lol", "Mdr", "Ok", 
+                "Salut ça va ?", "Quoi de neuf ?", "Pas mal", "Stylé",
+                "Je suis d'accord", "C'est fou", "Incroyable"
+            ]
+            while True:
+                try:
+                    msg = random.choice(messages)
+                    await channel.send(msg)
+                    await asyncio.sleep(delay + random.randint(-5, 5)) # Un peu d'aléatoire
+                except asyncio.CancelledError:
+                    break
+                except Exception as e:
+                    logger.error(f"Erreur autofarm: {e}")
+                    await asyncio.sleep(delay)
+        
+        task = asyncio.create_task(farm_loop())
+        autofarm_tasks[task_key] = task
+        await safe_send(ctx.channel, f"✅ Autofarm lancé dans <#{channel_id}> (délai ~{delay}s).", delete_after=5)
+
+@bot.command()
+async def whois(ctx: commands.Context, user: discord.User = None):
+    """Affiche les infos d'un utilisateur."""
+    await safe_delete(ctx.message)
+    user = user or ctx.author
+    
+    # Récupération membre si dans une guilde pour avoir les rôles
+    member = None
+    if ctx.guild:
+        member = ctx.guild.get_member(user.id)
+    
+    roles_str = "N/A"
+    joined_at = "N/A"
+    
+    if member:
+        roles = [r.name for r in member.roles if r.name != "@everyone"]
+        roles_str = ", ".join(roles) if roles else "Aucun"
+        if len(roles_str) > 100: roles_str = roles_str[:100] + "..."
+        if member.joined_at:
+            joined_at = member.joined_at.strftime("%d/%m/%Y %H:%M:%S")
+            
+    created_at = user.created_at.strftime("%d/%m/%Y %H:%M:%S")
+    
+    info = (
+        f"🕵️ **WHOIS: {user}**\n"
+        f"🆔 ID: `{user.id}`\n"
+        f"📅 Création: `{created_at}`\n"
+        f"📥 Rejoint: `{joined_at}`\n"
+        f"🎭 Rôles: `{roles_str}`\n"
+        f"🖼️ Avatar: {user.avatar.url if user.avatar else 'Par défaut'}"
+    )
+    
+    await safe_send(ctx.channel, info, delete_after=30)
 
 @bot.command()
 async def tokeninfo(ctx: commands.Context):
