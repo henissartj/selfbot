@@ -49,15 +49,17 @@ def start_bot(user_id, token):
     if is_bot_running(user_id):
         return False, "Already running"
 
-    # Priority: selfbot_env > system python
-    python_executable = "python3"
+    # Priority: selfbot_env > sys.executable > system python
+    python_executable = sys.executable  # Default to current interpreter (good for Render)
     
-    # Check for local selfbot_env
+    # Check for local selfbot_env (override if explicitly exists locally)
     venv_python = os.path.join(os.getcwd(), "selfbot_env", "bin", "python")
     if os.path.exists(venv_python):
         python_executable = venv_python
-    elif os.path.exists("/usr/bin/python3"):
-        python_executable = "/usr/bin/python3"
+    elif not os.path.exists(python_executable):
+        # Fallback if current interpreter path is weird
+        if os.path.exists("/usr/bin/python3"):
+            python_executable = "/usr/bin/python3"
 
     env = os.environ.copy()
     env["DISCORD_TOKEN"] = token
