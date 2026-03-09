@@ -3,6 +3,15 @@ from flask_session import Session
 import os
 import selfbot
 import bot_manager
+import subprocess
+import sys
+
+# Debug: Lister les paquets installés
+try:
+    print("📦 Paquets installés:")
+    subprocess.check_call([sys.executable, '-m', 'pip', 'freeze'])
+except Exception as e:
+    print(f"⚠️ Impossible de lister les paquets: {e}")
 
 # Configuration Flask
 app = Flask(__name__)
