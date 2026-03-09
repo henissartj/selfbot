@@ -5,3 +5,4 @@ deploy_package/
 tokens.json
 selfbot.log
 ffmpeg.exe
+config.json
