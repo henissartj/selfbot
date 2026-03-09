@@ -1,7 +1,5 @@
 import discord
 from discord.ext import commands
-import os
-import json
 import logging
 import asyncio
 import sys
@@ -14,74 +12,90 @@ logging.basicConfig(
 )
 logger = logging.getLogger("selfbot")
 
-# Configuration par défaut
-DEFAULT_CONFIG = {
-    "token": "",
-    "prefix": ".",
-    "whitelist": []
-}
+class BotInstance:
+    def __init__(self, token):
+        self.token = token
+        self.bot = commands.Bot(
+            command_prefix=".",
+            self_bot=True,
+            help_command=None
+        )
+        self.is_running = False
+        self.user_info = "Unknown"
+        self.status = "Initialized"
+        self.loop = asyncio.new_event_loop()
+        
+        # Enregistrement des événements et commandes
+        self.setup_events()
+        self.setup_commands()
 
-CONFIG_FILE = "config.json"
+    def setup_events(self):
+        @self.bot.event
+        async def on_ready():
+            self.status = "Online"
+            self.user_info = str(self.bot.user)
+            logger.info(f"✅ Connecté en tant que {self.bot.user} (ID: {self.bot.user.id})")
 
-def load_config():
-    if not os.path.exists(CONFIG_FILE):
-        return DEFAULT_CONFIG.copy()
-    try:
-        with open(CONFIG_FILE, 'r') as f:
-            return json.load(f)
-    except:
-        return DEFAULT_CONFIG.copy()
+    def setup_commands(self):
+        @self.bot.command()
+        async def ping(ctx):
+            """Vérifie que le bot répond."""
+            await ctx.message.delete()
+            await ctx.send("🏓 Pong!", delete_after=5)
 
-CONFIG = load_config()
+        @self.bot.command()
+        async def stop(ctx):
+            """Arrête le bot."""
+            await ctx.message.delete()
+            await ctx.send("🛑 Arrêt du bot...", delete_after=3)
+            await self.bot.close()
 
-# Variable globale pour le statut
-BOT_STATUS = "Starting..."
-BOT_USER = "Unknown"
+    async def start_async(self):
+        try:
+            self.status = "Connecting..."
+            await self.bot.start(self.token)
+        except Exception as e:
+            self.status = f"Error: {e}"
+            logger.error(f"Erreur de connexion: {e}")
+            raise e
+        finally:
+            self.is_running = False
 
-# Récupération du token (Priorité: Env Var > Config > Input)
-TOKEN = os.environ.get("DISCORD_TOKEN") or CONFIG.get("token")
+    def stop_bot(self):
+        if self.is_running:
+            asyncio.run_coroutine_threadsafe(self.bot.close(), self.loop)
 
-# Initialisation du Bot
-bot = commands.Bot(
-    command_prefix=CONFIG.get("prefix", "."),
-    self_bot=True,  # Important pour discord.py-self
-    help_command=None
-)
+    def run_in_thread(self):
+        asyncio.set_event_loop(self.loop)
+        self.is_running = True
+        try:
+            self.loop.run_until_complete(self.start_async())
+        except Exception as e:
+            logger.error(f"Thread error: {e}")
+        finally:
+            self.is_running = False
 
-@bot.event
-async def on_ready():
-    global BOT_STATUS, BOT_USER
-    BOT_STATUS = "Online"
-    BOT_USER = str(bot.user)
-    logger.info(f"✅ Connecté en tant que {bot.user} (ID: {bot.user.id})")
-    logger.info(f"Prefixe: {bot.command_prefix}")
+# Gestionnaire global des instances de bots
+# Dictionnaire : token -> instance
+active_bots = {}
 
-@bot.command()
-async def ping(ctx):
-    """Vérifie que le bot répond."""
-    await ctx.message.delete()
-    await ctx.send("🏓 Pong!", delete_after=5)
+def get_bot(token):
+    return active_bots.get(token)
 
-@bot.command()
-async def stop(ctx):
-    """Arrête le bot (Redémarrage automatique sur Render)."""
-    await ctx.message.delete()
-    await ctx.send("🛑 Arrêt en cours...", delete_after=3)
-    await bot.close()
-
-def run():
-    global TOKEN, BOT_STATUS
-    if not TOKEN:
-        BOT_STATUS = "Missing Token"
-        logger.warning("Aucun token trouvé ! Configurez DISCORD_TOKEN ou config.json")
-        return
+def start_bot(token):
+    if token in active_bots and active_bots[token].is_running:
+        return active_bots[token]
     
-    try:
-        BOT_STATUS = "Connecting..."
-        bot.run(TOKEN)
-    except Exception as e:
-        BOT_STATUS = f"Error: {e}"
-        logger.error(f"Erreur au lancement: {e}")
+    bot_instance = BotInstance(token)
+    active_bots[token] = bot_instance
+    
+    import threading
+    t = threading.Thread(target=bot_instance.run_in_thread, daemon=True)
+    t.start()
+    
+    return bot_instance
 
-if __name__ == "__main__":
-    run()
+def stop_bot(token):
+    if token in active_bots:
+        active_bots[token].stop_bot()
+        del active_bots[token]

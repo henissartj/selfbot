@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Selfbot Dashboard</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background-color: #1a1a1a; color: #fff; text-align: center; padding: 50px; }
+        .container { max-width: 600px; margin: 0 auto; background: #2d2d2d; padding: 40px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        .status-badge { display: inline-block; padding: 8px 15px; border-radius: 20px; font-weight: bold; margin: 15px 0; }
+        .online { background: #2ecc71; color: white; }
+        .error { background: #e74c3c; color: white; }
+        .connecting { background: #f39c12; color: white; }
+        .btn-logout { display: inline-block; margin-top: 30px; padding: 10px 20px; background: #e74c3c; color: white; text-decoration: none; border-radius: 5px; transition: background 0.3s; }
+        .btn-logout:hover { background: #c0392b; }
+        .user-info { font-size: 1.2em; margin: 20px 0; }
+    </style>
+    <script>
+        // Auto-refresh pour mettre à jour le statut
+        setTimeout(function(){
+            location.reload();
+        }, 5000);
+    </script>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 Tableau de Bord</h1>
+        
+        <div class="user-info">
+            Connecté en tant que : <strong>{{ user }}</strong>
+        </div>
+
+        <div>
+            Statut actuel : 
+            <span class="status-badge {% if status == 'Online' %}online{% elif 'Error' in status %}error{% else %}connecting{% endif %}">
+                {{ status }}
+            </span>
+        </div>
+
+        <p>Le bot tourne en arrière-plan. Vous pouvez fermer cette page.</p>
+
+        <a href="/logout" class="btn-logout">Déconnexion & Arrêt du Bot</a>
+    </div>
+</body>
+</html>
