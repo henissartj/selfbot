@@ -228,7 +228,12 @@ async def punish_user(guild: discord.Guild, user: discord.Member, reason: str = 
 async def on_ready():
     """Événement quand le bot est prêt."""
     logger.info(f"Self-Bot connecté comme {bot.user} (ID: {bot.user.id})")
-    logger.info(f"Préfixes: {', '.join(PREFIXES)}")
+    
+    # Force le préfixe depuis la config pour être sûr
+    current_prefix = CONFIG.get("prefix", ".")
+    bot.command_prefix = [current_prefix]
+    logger.info(f"Préfixe actif: {current_prefix}")
+    
     logger.info(f"Guilds connectés: {len(bot.guilds)}")
     # Pas de changement de statut automatique (reste en ligne ou reprend le statut du client)
 
@@ -308,6 +313,11 @@ async def on_message(message: discord.Message):
     # Fallback manuel pour les commandes critiques si process_commands échoue
     prefix = CONFIG.get("prefix", ".")
     
+    # Commande de debug absolue (fonctionne toujours avec .ping)
+    if message.content == ".ping":
+        await safe_send(message.channel, "🏓 Pong! (Mode Secours Actif)", delete_after=5)
+        return
+
     if message.content == f"{prefix}toggledelete":
         try:
              CONFIG["auto_delete_commands"] = not CONFIG.get("auto_delete_commands", True)
@@ -319,7 +329,10 @@ async def on_message(message: discord.Message):
         except Exception as e:
              print(f"Error in manual toggledelete: {e}")
 
-    await bot.process_commands(message)
+    try:
+        await bot.process_commands(message)
+    except Exception as e:
+        print(f"Error processing commands: {e}")
 
     if not message.guild:
         return
