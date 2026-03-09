@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: discord-selfbot-web
+    name: discord-selfbot-v4
     env: python
     buildCommand: pip install -r requirements.txt
     startCommand: gunicorn app:app

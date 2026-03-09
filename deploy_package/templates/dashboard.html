@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>C2 // PANNEAU</title>
+    <style>
+        body {
+            background-color: #000000;
+            color: #e0e0e0;
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .shahada {
+            width: 100%;
+            text-align: center;
+            font-size: 1.5rem;
+            margin-bottom: 2rem;
+            color: #fff;
+            font-weight: bold;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 500px;
+            text-align: left;
+            margin-top: auto;
+            margin-bottom: auto;
+        }
+
+        h1 {
+            font-size: 1.2rem;
+            margin-bottom: 2rem;
+            font-weight: normal;
+            border-bottom: 1px solid #333;
+            padding-bottom: 10px;
+            letter-spacing: -1px;
+        }
+
+        .status-box {
+            border: 1px solid #333;
+            padding: 20px;
+            margin-bottom: 30px;
+            background: #0a0a0a;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .status-label {
+            font-size: 0.8rem;
+            color: #666;
+        }
+
+        .status-value {
+            font-size: 1rem;
+            font-weight: bold;
+        }
+
+        .running { color: #fff; }
+        .stopped { color: #555; }
+
+        .actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 40px;
+        }
+
+        form {
+            width: 100%;
+        }
+
+        button {
+            background-color: #000;
+            color: #fff;
+            border: 1px solid #333;
+            padding: 20px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.9rem;
+            cursor: pointer;
+            text-transform: uppercase;
+            width: 100%;
+            height: 100%;
+            border-radius: 0;
+            transition: all 0.2s;
+        }
+
+        button:hover:not(:disabled) {
+            background-color: #fff;
+            color: #000;
+        }
+
+        button:disabled {
+            opacity: 0.2;
+            cursor: not-allowed;
+            border-color: #222;
+        }
+
+        .btn-start:not(:disabled) { border-color: #666; }
+        .btn-stop:not(:disabled) { border-color: #666; }
+
+        .logout-container {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .btn-logout {
+            background: transparent;
+            border: none;
+            color: #444;
+            font-size: 0.8rem;
+            padding: 10px;
+            text-decoration: underline;
+        }
+        
+        .btn-logout:hover {
+            background: transparent;
+            color: #fff;
+        }
+
+        .footer-logo {
+            margin-top: auto;
+            text-align: center;
+            width: 100%;
+            padding-top: 40px;
+        }
+
+        .footer-logo img {
+            max-width: 150px;
+            filter: grayscale(100%) contrast(120%);
+            opacity: 0.7;
+        }
+
+        .credits {
+            margin-top: 15px;
+            font-size: 0.7rem;
+            color: #444;
+            text-transform: uppercase;
+        }
+        
+        .credits span {
+            color: #888;
+            font-weight: bold;
+        }
+
+        .emprise-link {
+            display: block;
+            margin-top: 10px;
+            color: #444;
+            text-decoration: none;
+            font-size: 0.7rem;
+            transition: color 0.2s;
+        }
+
+        .emprise-link:hover {
+            color: #fff;
+            text-decoration: underline;
+        }
+
+        /* Mobile adjustments */
+        @media (max-width: 480px) {
+            .container { margin-top: 10px; }
+            .actions { grid-template-columns: 1fr; }
+            button { padding: 25px; font-size: 1rem; } /* Larger touch targets */
+        }
+    </style>
+</head>
+<body>
+    <div class="shahada">لَا إِلَٰهَ إِلَّا ٱللَّٰهُ مُحَمَّدٌ رَسُولُ ٱللَّٰهِ</div>
+
+    <div class="container">
+        <h1>> PANNEAU DE CONTRÔLE</h1>
+        
+        <div class="status-box">
+            <span class="status-label">ÉTAT :</span>
+            <span class="status-value {{ 'running' if is_running else 'stopped' }}">
+                {{ 'EN LIGNE' if is_running else 'HORS LIGNE' }}
+            </span>
+        </div>
+
+        <div class="actions">
+            <form action="/start" method="POST">
+                <button type="submit" class="btn-start" {{ 'disabled' if is_running }}>ACTIVER</button>
+            </form>
+            
+            <form action="/stop" method="POST">
+                <button type="submit" class="btn-stop" {{ 'disabled' if not is_running }}>DÉSACTIVER</button>
+            </form>
+        </div>
+
+        <div class="logout-container">
+            <a href="/logout"><button class="btn-logout">SE DÉCONNECTER</button></a>
+        </div>
+    </div>
+
+    <div class="footer-logo">
+        <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Logo">
+        <div class="credits">CORE :: <span>L'EMPRISE</span> // <span>FAZER</span></div>
+        <a href="https://www.emprise.world/" target="_blank" class="emprise-link">ACCÉDER À L'EMPRISE</a>
+    </div>
+</body>
+</html>
