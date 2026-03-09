@@ -34,6 +34,10 @@ def load_config():
 
 CONFIG = load_config()
 
+# Variable globale pour le statut
+BOT_STATUS = "Starting..."
+BOT_USER = "Unknown"
+
 # Récupération du token (Priorité: Env Var > Config > Input)
 TOKEN = os.environ.get("DISCORD_TOKEN") or CONFIG.get("token")
 
@@ -46,6 +50,9 @@ bot = commands.Bot(
 
 @bot.event
 async def on_ready():
+    global BOT_STATUS, BOT_USER
+    BOT_STATUS = "Online"
+    BOT_USER = str(bot.user)
     logger.info(f"✅ Connecté en tant que {bot.user} (ID: {bot.user.id})")
     logger.info(f"Prefixe: {bot.command_prefix}")
 
@@ -63,14 +70,17 @@ async def stop(ctx):
     await bot.close()
 
 def run():
-    global TOKEN
+    global TOKEN, BOT_STATUS
     if not TOKEN:
+        BOT_STATUS = "Missing Token"
         logger.warning("Aucun token trouvé ! Configurez DISCORD_TOKEN ou config.json")
         return
     
     try:
+        BOT_STATUS = "Connecting..."
         bot.run(TOKEN)
     except Exception as e:
+        BOT_STATUS = f"Error: {e}"
         logger.error(f"Erreur au lancement: {e}")
 
 if __name__ == "__main__":
