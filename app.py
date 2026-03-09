@@ -1,51 +1,19 @@
-from flask import Flask, render_template, request, session, redirect, url_for
-from flask_session import Session
+from flask import Flask
+import threading
 import os
-import selfbot
+import bot_manager
 
 app = Flask(__name__)
-app.secret_key = os.urandom(24)
-app.config["SESSION_TYPE"] = "filesystem"
-Session(app)
 
-@app.route('/', methods=['GET', 'POST'])
+@app.route('/')
 def index():
-    if 'token' in session:
-        return redirect(url_for('dashboard'))
-    
-    if request.method == 'POST':
-        token = request.form.get('token')
-        if token:
-            session['token'] = token
-            # Démarrer le bot pour cet utilisateur
-            selfbot.start_bot(token)
-            return redirect(url_for('dashboard'))
-            
-    return render_template('login.html')
+    return "Manager Bot is running! 🤖 Use Discord to interact."
 
-@app.route('/dashboard')
-def dashboard():
-    if 'token' not in session:
-        return redirect(url_for('index'))
-    
-    token = session['token']
-    bot_instance = selfbot.get_bot(token)
-    
-    if not bot_instance:
-        # Si le bot n'est pas lancé (redémarrage serveur par ex), on le relance
-        bot_instance = selfbot.start_bot(token)
-    
-    return render_template('dashboard.html', 
-                         status=bot_instance.status, 
-                         user=bot_instance.user_info)
+def run_manager():
+    bot_manager.run()
 
-@app.route('/logout')
-def logout():
-    token = session.get('token')
-    if token:
-        selfbot.stop_bot(token)
-    session.pop('token', None)
-    return redirect(url_for('index'))
+# Lancer le Manager Bot dans un thread
+threading.Thread(target=run_manager, daemon=True).start()
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
