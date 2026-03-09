@@ -628,23 +628,7 @@ async def stopstatus(ctx: commands.Context):
     else:
         await safe_send(ctx.channel, "❌ Pas de rotation en cours.", delete_after=5)
 
-@bot.command()
-async def stop(ctx: commands.Context):
-    """Arrêt d'urgence de toutes les boucles (spam, raid, massban...)."""
-    global stop_requested
-    await safe_delete(ctx.message)
-    stop_requested = True
-    await safe_send(ctx.channel, "🛑 Arrêt d'urgence demandé... (Wait 3s)", delete_after=5)
-    await asyncio.sleep(3)
-    stop_requested = False
 
-@bot.command()
-async def stopparrot(ctx: commands.Context):
-    """Arrête le mode Perroquet."""
-    global parrot_target_id
-    await safe_delete(ctx.message)
-    parrot_target_id = None
-    await safe_send(ctx.channel, "🦜 Mode Perroquet arrêté.", delete_after=5)
 
 @bot.command()
 async def stopfarm(ctx: commands.Context, channel_id: int = None):
