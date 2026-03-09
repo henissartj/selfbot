@@ -19,11 +19,8 @@ try:
 except ImportError:
     yt_dlp = None
 
-try:
-    import tkinter as tk
-    from tkinter import scrolledtext, messagebox
-except ImportError:
-    tk = None
+# GUI tools disabled for server environment
+tk = None
 
 import discord
 from discord.ext import commands
@@ -43,19 +40,27 @@ DEFAULT_CONFIG = {
 }
 
 def load_config():
-    if not os.path.exists(CONFIG_FILE):
-        with open(CONFIG_FILE, 'w') as f:
-            json.dump(DEFAULT_CONFIG, f, indent=4)
-        return DEFAULT_CONFIG.copy()
+    # In server environment, config might be read-only or ephemeral
     try:
+        if not os.path.exists(CONFIG_FILE):
+            try:
+                with open(CONFIG_FILE, 'w') as f:
+                    json.dump(DEFAULT_CONFIG, f, indent=4)
+            except IOError:
+                pass # Cannot write, just return default
+            return DEFAULT_CONFIG.copy()
+        
         with open(CONFIG_FILE, 'r') as f:
             return json.load(f)
-    except:
+    except Exception:
         return DEFAULT_CONFIG.copy()
 
 def save_config(config):
-    with open(CONFIG_FILE, 'w') as f:
-        json.dump(config, f, indent=4)
+    try:
+        with open(CONFIG_FILE, 'w') as f:
+            json.dump(config, f, indent=4)
+    except IOError:
+        print("Warning: Could not save config (read-only filesystem?)")
 
 CONFIG = load_config()
 
@@ -112,15 +117,25 @@ rotate_status_task = None
 stop_requested: bool = False
 
 # Logging setup
-logging.basicConfig(
-    level=logging.INFO,
-    format="[%(asctime)s] [%(levelname)s] %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-    handlers=[
-        logging.FileHandler("selfbot.log"),
-        logging.StreamHandler(sys.stdout)
-    ]
-)
+try:
+    logging.basicConfig(
+        level=logging.INFO,
+        format="[%(asctime)s] [%(levelname)s] %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+        handlers=[
+            logging.StreamHandler(sys.stdout)
+        ]
+    )
+    # Try adding file handler, but don't fail if it doesn't work
+    try:
+        file_handler = logging.FileHandler("selfbot.log")
+        file_handler.setFormatter(logging.Formatter("[%(asctime)s] [%(levelname)s] %(message)s"))
+        logging.getLogger().addHandler(file_handler)
+    except IOError:
+        pass
+except Exception as e:
+    print(f"Logging setup failed: {e}")
+
 logger = logging.getLogger("selfbot")
 
 # ──────────────────────────────────────────────────────────────────────────────
