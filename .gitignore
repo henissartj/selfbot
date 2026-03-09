@@ -4,3 +4,4 @@ deploy_package/
 *.pyc
 tokens.json
 selfbot.log
+ffmpeg.exe

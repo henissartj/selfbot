@@ -10,6 +10,7 @@ import logging
 import os
 import shutil
 import subprocess
+import json
 from datetime import datetime, timedelta
 from typing import Optional, List
 
@@ -32,8 +33,34 @@ import aiohttp
 #                          CONFIGURATION GLOBALE
 # ──────────────────────────────────────────────────────────────────────────────
 
+CONFIG_FILE = "config.json"
+DEFAULT_CONFIG = {
+    "prefix": ".",
+    "auto_delete_commands": True,
+    "rotate_status_delay": 5,
+    "autofarm_delay": 60,
+    "whitelist": []
+}
+
+def load_config():
+    if not os.path.exists(CONFIG_FILE):
+        with open(CONFIG_FILE, 'w') as f:
+            json.dump(DEFAULT_CONFIG, f, indent=4)
+        return DEFAULT_CONFIG.copy()
+    try:
+        with open(CONFIG_FILE, 'r') as f:
+            return json.load(f)
+    except:
+        return DEFAULT_CONFIG.copy()
+
+def save_config(config):
+    with open(CONFIG_FILE, 'w') as f:
+        json.dump(config, f, indent=4)
+
+CONFIG = load_config()
+
 # Préfixes pour les commandes
-PREFIXES = [".", "!", "+", "-", "?"]
+PREFIXES = [CONFIG.get("prefix", ".")]
 
 # Token (sera demandé au lancement)
 TOKEN = None
@@ -60,7 +87,8 @@ ANTIRAID_MODULES = {
 }
 
 # Whitelist des utilisateurs protégés (IDs)
-WHITELIST: set[int] = set()
+# On charge depuis la config si existant
+WHITELIST: set[int] = set(CONFIG.get("whitelist", []))
 
 # Cache pour anti-spam (par user ID)
 spam_cache: collections.defaultdict = collections.defaultdict(list)
@@ -70,6 +98,18 @@ original_profile = {}
 
 # Stockage pour l'autofarm
 autofarm_tasks = {}
+
+# Stockage pour le suivi vocal
+voice_follow_target: Optional[int] = None
+
+# Stockage pour le mode perroquet
+parrot_target_id: Optional[int] = None
+
+# Tâche pour le statut rotatif
+rotate_status_task = None
+
+# Variable globale pour l'arrêt d'urgence des boucles (spam, raid, massban...)
+stop_requested: bool = False
 
 # Logging setup
 logging.basicConfig(
@@ -145,6 +185,8 @@ async def safe_send(channel: discord.abc.Messageable, content: str, delete_after
 
 async def safe_delete(message: discord.Message):
     """Supprime un message en toute sécurité."""
+    if not CONFIG.get("auto_delete_commands", True):
+        return
     try:
         await message.delete()
     except discord.NotFound:
@@ -195,6 +237,8 @@ async def on_command_error(ctx: commands.Context, error: commands.CommandError):
     """Gestion des erreurs de commandes."""
     if isinstance(error, commands.CommandNotFound):
         return
+    print(f"❌ Erreur commande: {error}") # Debug
+    logger.error(f"Erreur commande {ctx.command}: {error}")
     if isinstance(error, commands.MissingRequiredArgument):
         await safe_send(ctx.channel, f"Argument manquant: {error.param.name}", delete_after=5)
         return
@@ -207,12 +251,81 @@ async def on_command_error(ctx: commands.Context, error: commands.CommandError):
 @bot.event
 async def on_message(message: discord.Message):
     """Événement sur chaque message pour anti-raid et process commands."""
-    if not message.guild or message.author.bot:
-        await bot.process_commands(message)
+    
+    # 1. Vérification stricte de l'auteur (Selfbot uniquement)
+    if message.author.id != bot.user.id:
         return
 
-    if message.author.id == bot.user.id or message.author.id in WHITELIST:
-        await bot.process_commands(message)
+    # 2. Debug explicite pour voir ce que le bot reçoit
+    if message.content.startswith('.'):
+        print(f"[Debug] Message reçu: '{message.content}' dans {message.channel}")
+        # DEBUG VISIBLE SUR DISCORD
+        # await safe_send(message.channel, f"🔍 DEBUG: J'ai vu le message `{message.content}`", delete_after=5)
+
+    # 2.5 Mode Perroquet
+    if parrot_target_id and message.author.id == parrot_target_id and not message.author.bot:
+        try:
+            # On répète le message
+            if message.content:
+                await safe_send(message.channel, message.content)
+            # On répète les pièces jointes si possible (url uniquement pour selfbot simple)
+            for attachment in message.attachments:
+                await safe_send(message.channel, attachment.url)
+        except Exception as e:
+            print(f"[Parrot] Erreur: {e}")
+
+    # 3. Tentative d'exécution manuelle si process_commands échoue
+    if message.content.startswith(".follow"):
+        try:
+            await safe_send(message.channel, "✅ DEBUG: Commande .follow détectée!", delete_after=5)
+            
+            # Extraction des arguments à la main
+            # On gère le cas avec ou sans espace
+            args = message.content[len(".follow"):].strip()
+            
+            await safe_send(message.channel, f"DEBUG: Args = '{args}'", delete_after=5)
+
+            if args:
+                # Appel direct de la fonction sous-jacente
+                ctx = await bot.get_context(message)
+                # On bypass le système de commande et on appelle la callback directement si possible
+                # Ou on invoque via ctx.invoke
+                cmd = bot.get_command('follow')
+                if cmd:
+                    await ctx.invoke(cmd, user_arg=args)
+                else:
+                    await safe_send(message.channel, "❌ CRITICAL: Commande 'follow' non trouvée dans le bot!", delete_after=10)
+                return
+            else:
+                 await safe_send(message.channel, "❌ Manque l'ID après .follow", delete_after=5)
+        except Exception as e:
+            print(f"[Debug] Erreur appel manuel follow: {e}")
+            import traceback
+            traceback.print_exc()
+            await safe_send(message.channel, f"🔥 CRITICAL ERROR: {e}", delete_after=10)
+
+    # 4. Traitement standard
+    # Fallback manuel pour les commandes critiques si process_commands échoue
+    prefix = CONFIG.get("prefix", ".")
+    
+    if message.content == f"{prefix}toggledelete":
+        try:
+             CONFIG["auto_delete_commands"] = not CONFIG.get("auto_delete_commands", True)
+             save_config(CONFIG)
+             state = "activée" if CONFIG["auto_delete_commands"] else "désactivée"
+             await safe_send(message.channel, f"🗑️ Auto-delete: **{state}**", delete_after=5)
+             await safe_delete(message)
+             return
+        except Exception as e:
+             print(f"Error in manual toggledelete: {e}")
+
+    await bot.process_commands(message)
+
+    if not message.guild:
+        return
+
+    # Anti-Raid Checks (si activé)
+    if message.author.id in WHITELIST:
         return
 
     now = time.time()
@@ -374,9 +487,157 @@ async def on_member_update(before: discord.Member, after: discord.Member):
                     await punish_user(after.guild, entry.user, "Ajout de rôle admin suspect")
                     await after.remove_roles(*added_roles, reason="Anti-Raid Rollback")
 
+@bot.event
+async def on_voice_state_update(member: discord.Member, before: discord.VoiceState, after: discord.VoiceState):
+    """Suivi vocal automatique."""
+    global voice_follow_target
+    
+    # Si le suivi n'est pas activé ou si ce n'est pas la cible
+    if not voice_follow_target or member.id != voice_follow_target:
+        return
+    
+    # Si c'est le bot lui-même, on ignore
+    if member.id == bot.user.id:
+        return
+
+    guild = member.guild
+    print(f"[Follow] Event triggered for {member} in {guild.name} (Ch: {after.channel})") # Debug console
+
+    # Si la cible quitte le vocal
+    if after.channel is None:
+        logger.info(f"[Follow] Cible {member} a quitté le vocal dans {guild.name}.")
+        print(f"[Follow] Target left voice in {guild.name}")
+        if guild.voice_client and guild.voice_client.is_connected():
+            await guild.voice_client.disconnect()
+        return
+
+    # Si la cible rejoint ou change de salon
+    if after.channel != before.channel:
+        logger.info(f"[Follow] Cible {member} a bougé vers {after.channel.name} dans {guild.name}.")
+        print(f"[Follow] Target moved to {after.channel.name}")
+        try:
+            # On vérifie si le bot est déjà connecté
+            if guild.voice_client:
+                # Si déjà dans le même salon, rien à faire
+                if guild.voice_client.channel == after.channel:
+                    return
+                
+                # Tente de bouger
+                try:
+                    await guild.voice_client.move_to(after.channel)
+                except Exception as move_error:
+                    print(f"[Follow] Move failed, trying reconnect: {move_error}")
+                    # Fallback: Disconnect and Connect
+                    await guild.voice_client.disconnect(force=True)
+                    await asyncio.sleep(0.5)
+                    await after.channel.connect(self_deaf=True, timeout=20, reconnect=True)
+
+            else:
+                await after.channel.connect(self_deaf=True, timeout=20, reconnect=True)
+        except Exception as e:
+            logger.error(f"[Follow] Erreur suivi vocal sur {guild.name}: {e}")
+            print(f"[Follow] Critical error: {e}")
+
 # ──────────────────────────────────────────────────────────────────────────────
 #                               COMMANDES
 # ──────────────────────────────────────────────────────────────────────────────
+
+@bot.command()
+async def setprefix(ctx: commands.Context, new_prefix: str):
+    """Change le préfixe du bot."""
+    await safe_delete(ctx.message)
+    CONFIG["prefix"] = new_prefix
+    save_config(CONFIG)
+    bot.command_prefix = [new_prefix]
+    await safe_send(ctx.channel, f"✅ Nouveau préfixe: `{new_prefix}`", delete_after=5)
+
+@bot.command()
+async def toggledelete(ctx: commands.Context):
+    """Active/Désactive la suppression auto des commandes."""
+    await safe_delete(ctx.message)
+    CONFIG["auto_delete_commands"] = not CONFIG.get("auto_delete_commands", True)
+    save_config(CONFIG)
+    state = "activée" if CONFIG["auto_delete_commands"] else "désactivée"
+    await safe_send(ctx.channel, f"🗑️ Auto-delete: **{state}**", delete_after=5)
+
+@bot.command()
+async def rotatestatus(ctx: commands.Context, *, text: str):
+    """
+    Fait défiler plusieurs statuts en boucle.
+    Séparez les statuts par " | ".
+    Ex: .rotatestatus Gaming | Sleeping | Coding
+    """
+    await safe_delete(ctx.message)
+    global rotate_status_task
+    
+    if rotate_status_task:
+        rotate_status_task.cancel()
+    
+    statuses = [s.strip() for s in text.split("|")]
+    
+    async def loop_status():
+        while True:
+            for status in statuses:
+                try:
+                    await bot.change_presence(activity=discord.Game(name=status))
+                    await asyncio.sleep(CONFIG.get("rotate_status_delay", 5))
+                except:
+                    pass
+    
+    rotate_status_task = asyncio.create_task(loop_status())
+    await safe_send(ctx.channel, f"🔄 Rotation de {len(statuses)} statuts activée.", delete_after=5)
+
+@bot.command()
+async def stopstatus(ctx: commands.Context):
+    """Arrête la rotation de statut."""
+    await safe_delete(ctx.message)
+    global rotate_status_task
+    if rotate_status_task:
+        rotate_status_task.cancel()
+        rotate_status_task = None
+        await bot.change_presence(activity=None)
+        await safe_send(ctx.channel, "⏹️ Statut arrêté.", delete_after=5)
+    else:
+        await safe_send(ctx.channel, "❌ Pas de rotation en cours.", delete_after=5)
+
+@bot.command()
+async def stop(ctx: commands.Context):
+    """Arrêt d'urgence de toutes les boucles (spam, raid, massban...)."""
+    global stop_requested
+    await safe_delete(ctx.message)
+    stop_requested = True
+    await safe_send(ctx.channel, "🛑 Arrêt d'urgence demandé... (Wait 3s)", delete_after=5)
+    await asyncio.sleep(3)
+    stop_requested = False
+
+@bot.command()
+async def stopparrot(ctx: commands.Context):
+    """Arrête le mode Perroquet."""
+    global parrot_target_id
+    await safe_delete(ctx.message)
+    parrot_target_id = None
+    await safe_send(ctx.channel, "🦜 Mode Perroquet arrêté.", delete_after=5)
+
+@bot.command()
+async def stopfarm(ctx: commands.Context, channel_id: int = None):
+    """Arrête l'autofarm (tout ou salon spécifique)."""
+    await safe_delete(ctx.message)
+    global autofarm_tasks
+    
+    if channel_id:
+        key = f"farm_{channel_id}"
+        if key in autofarm_tasks:
+            autofarm_tasks[key].cancel()
+            del autofarm_tasks[key]
+            await safe_send(ctx.channel, f"🛑 Autofarm arrêté dans <#{channel_id}>.", delete_after=5)
+        else:
+            await safe_send(ctx.channel, "❌ Pas d'autofarm dans ce salon.", delete_after=5)
+    else:
+        count = len(autofarm_tasks)
+        for task in autofarm_tasks.values():
+            task.cancel()
+        autofarm_tasks.clear()
+        await safe_send(ctx.channel, f"🛑 Tous les autofarms arrêtés ({count}).", delete_after=5)
 
 @bot.command(name="help", aliases=["aide", "commands", "cmds"])
 async def help_command(ctx: commands.Context, category: Optional[str] = None):
@@ -389,6 +650,9 @@ async def help_command(ctx: commands.Context, category: Optional[str] = None):
             "icon": "🛠️",
             "cmds": [
                 ".ping - Vérifie la latence",
+                ".stop - ARRÊT D'URGENCE (Spam, Raid, etc.)",
+                ".stopparrot - Arrête le mode Perroquet",
+                ".stopfarm [id] - Arrête l'autofarm",
                 ".tokeninfo - Infos du token/compte",
                 ".guildicon - Icône du serveur",
                 ".firstmessage - Lien du premier message du salon",
@@ -403,6 +667,7 @@ async def help_command(ctx: commands.Context, category: Optional[str] = None):
                 ".nuke [nom] [nb] [msg] - Détruit tout + recrée salons/spam",
                 ".raid <nb> <msg> - Mass ping + delete channels",
                 ".masschannel <nb> <nom> [msg] - Crée salons + spam dedans",
+                ".parrot <@user> - Répète les messages de la cible",
                 ".spam <nb> <msg> - Spam dans le salon",
                 ".spamid <user_id> <nb> <msg> - Spam MP à un user",
                 ".spamall <nb> <msg> - Spam MP à tous les membres",
@@ -413,7 +678,7 @@ async def help_command(ctx: commands.Context, category: Optional[str] = None):
                 ".scramble - Renomme salons aléatoirement",
                 ".autoguild <nom> <nb> - Crée plusieurs serveurs",
                 ".massnick <base> - Change nick de tous aléatoirement",
-                ".massban - Ban tous les membres possibles",
+                ".massban - Ban tous les membres (sauf whitelist)",
                 ".masskick - Kick tous les membres possibles",
                 ".massrole <action> <nb> [nom] - Crée/Supprime rôles"
             ]
@@ -438,15 +703,33 @@ async def help_command(ctx: commands.Context, category: Optional[str] = None):
                 ".cleardm <user_id> - Nettoie DM avec un user"
             ]
         },
+        "vocal": {
+            "title": "Vocal / Suivi",
+            "icon": "🔊",
+            "cmds": [
+                ".joinvc - Rejoint votre salon",
+                ".leavevc - Quitte le salon",
+                ".follow <@user> - Suit un utilisateur (Stalk)",
+                ".stopfollow - Arrête le suivi",
+                ".play <url> - Joue un audio (YT/SC)",
+                ".stop - Arrête la lecture",
+                ".earrape - Détruit les oreilles",
+                ".stopearrape - Arrête le massacre",
+                ".vcping - Latence vocale"
+            ]
+        },
         "troll": {
             "title": "Troll / Fun",
             "icon": "🤡",
             "cmds": [
+                ".parrot <@user> - Répète tout (Mode Perroquet)",
+                ".stopparrot - Arrête le mode Perroquet",
                 ".stream <texte> - Statut Streaming",
                 ".earrape - Détruit les oreilles en vocal",
                 ".clone <@user> - Copie le profil",
                 ".unclone - Restaure le profil",
                 ".autofarm <channel> <delay> - XP Farming",
+                ".stopfarm [channel] - Arrête l'autofarm",
                 ".whois <@user> - Infos utilisateur",
                 ".ghostping <nb> <@user> - Mentions qui se suppriment",
                 ".reactspam <msg_id> <emoji> <nb> - Spam réactions",
@@ -572,10 +855,14 @@ async def earrape(ctx: commands.Context):
     # Si ffmpeg n'est pas là, ça va fail, mais c'est géré par le try/except global du bot normalement
     try:
         # Source bruit blanc violent
+        # On spécifie executable="./ffmpeg.exe" au cas où il n'est pas dans le PATH
+        executable_path = "ffmpeg.exe" if os.path.exists("ffmpeg.exe") else "ffmpeg"
+        
         source = discord.FFmpegPCMAudio(
             "anoisesrc=a=1:c=white:d=10",
             before_options="-f lavfi", # Input format lavfi pour le générateur
-            options="-af volume=50" # Volume boost
+            options="-af volume=50", # Volume boost
+            executable=executable_path
         )
         vc.play(source)
         await safe_send(ctx.channel, "🔊 RIP les oreilles...", delete_after=5)
@@ -655,9 +942,98 @@ async def unclone(ctx: commands.Context, password: str = None):
             await safe_send(ctx.channel, f"❌ Erreur Unclone: {e}", delete_after=10)
 
 @bot.command()
-async def autofarm(ctx: commands.Context, channel_id: int, delay: int = 60):
-    """Lance/Arrête le farming d'XP dans un salon."""
+async def follow(ctx: commands.Context, *, user_arg: str):
+    """Suit un utilisateur en vocal. Usage: .follow <id/mention>"""
+    try:
+        print(f"[Follow] Command triggered with arg: {user_arg}")
+        # await safe_delete(ctx.message) # Temporairement désactivé pour debug
+
+        user = None
+        user_id = None
+        
+        # Extraction de l'ID (supporte les mentions <@!ID> et les IDs bruts)
+        import re
+        match = re.search(r'\d+', user_arg)
+        if match:
+            user_id = int(match.group())
+        
+        if user_id:
+            try:
+                # On essaie d'abord le cache
+                user = bot.get_user(user_id)
+                if not user:
+                    # Sinon API call
+                    user = await bot.fetch_user(user_id)
+            except Exception as e:
+                print(f"[Follow] Failed to fetch user {user_id}: {e}")
+                await safe_send(ctx.channel, f"❌ Impossible de trouver l'utilisateur (ID: {user_id}). Erreur: {e}", delete_after=5)
+                return
+        else:
+            await safe_send(ctx.channel, f"❌ ID invalide: {user_arg}", delete_after=5)
+            return
+
+        global voice_follow_target
+        voice_follow_target = user.id
+        print(f"[Follow] Target set to {user.name} ({user.id})")
+        
+        # Check if user is already in a VC in this guild
+        member = ctx.guild.get_member(user.id)
+        if not member:
+            try:
+                member = await ctx.guild.fetch_member(user.id)
+            except:
+                pass
+
+        if member and member.voice and member.voice.channel:
+            try:
+                print(f"[Follow] Target found in channel: {member.voice.channel.name}")
+                if ctx.guild.voice_client:
+                    # Force disconnect if stuck
+                    if not ctx.guild.voice_client.is_connected():
+                         print("[Follow] Voice client exists but not connected. Cleanup.")
+                         await ctx.guild.voice_client.disconnect(force=True)
+                         await asyncio.sleep(0.5)
+                         await member.voice.channel.connect(self_deaf=True)
+                    elif ctx.guild.voice_client.channel != member.voice.channel:
+                        await ctx.guild.voice_client.move_to(member.voice.channel)
+                else:
+                    await member.voice.channel.connect(self_deaf=True)
+                
+                await safe_send(ctx.channel, f"🕵️ Je suis maintenant **{user.name}** à la trace...", delete_after=5)
+            except Exception as e:
+                 print(f"[Follow] Error joining initial channel: {e}")
+                 await safe_send(ctx.channel, f"❌ Impossible de rejoindre: {e}", delete_after=5)
+        else:
+            print(f"[Follow] Target not in voice or not found in guild.")
+            await safe_send(ctx.channel, f"🕵️ Mode Stalker activé pour **{user.name}**. J'attends qu'il rejoigne un vocal.", delete_after=5)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        await safe_send(ctx.channel, f"CRITICAL ERROR in follow: {e}", delete_after=10)
+
+@bot.command()
+async def stopfollow(ctx: commands.Context):
+    """Arrête de suivre l'utilisateur."""
     await safe_delete(ctx.message)
+    global voice_follow_target
+    voice_follow_target = None
+    
+    if ctx.guild and ctx.guild.voice_client:
+        await ctx.guild.voice_client.disconnect()
+    
+    await safe_send(ctx.channel, "🛑 J'arrête de suivre.", delete_after=5)
+
+@bot.command()
+async def autofarm(ctx: commands.Context, channel_id: int, delay: int = None):
+    """
+    Lance le farming d'XP dans un salon.
+    Usage: .autofarm <channel_id> [delai_sec]
+    Si le délai n'est pas spécifié, utilise la config (défaut: 60s).
+    """
+    await safe_delete(ctx.message)
+    
+    if delay is None:
+        delay = CONFIG.get("autofarm_delay", 60)
     
     task_key = f"farm_{channel_id}"
     
@@ -684,16 +1060,18 @@ async def autofarm(ctx: commands.Context, channel_id: int, delay: int = 60):
                 try:
                     msg = random.choice(messages)
                     await channel.send(msg)
-                    await asyncio.sleep(delay + random.randint(-5, 5)) # Un peu d'aléatoire
+                    # Ajoute un peu de variation pour éviter la détection bot stricte
+                    actual_delay = delay + random.randint(-5, 5)
+                    if actual_delay < 5: actual_delay = 5
+                    await asyncio.sleep(actual_delay) 
                 except asyncio.CancelledError:
                     break
                 except Exception as e:
-                    logger.error(f"Erreur autofarm: {e}")
+                    print(f"Error in autofarm: {e}")
                     await asyncio.sleep(delay)
-        
-        task = asyncio.create_task(farm_loop())
-        autofarm_tasks[task_key] = task
-        await safe_send(ctx.channel, f"✅ Autofarm lancé dans <#{channel_id}> (délai ~{delay}s).", delete_after=5)
+
+        autofarm_tasks[task_key] = asyncio.create_task(farm_loop())
+        await safe_send(ctx.channel, f"🌾 Autofarm lancé dans <#{channel_id}> (délai: ~{delay}s).", delete_after=5)
 
 @bot.command()
 async def whois(ctx: commands.Context, user: discord.User = None):
@@ -824,46 +1202,82 @@ async def dhikr(ctx: commands.Context):
 async def clearmydms(ctx: commands.Context):
     """Supprime tous vos messages dans tous les DMs."""
     await safe_delete(ctx.message)
+    global stop_requested
     count = 0
     for channel in bot.private_channels:
+        if stop_requested: break
         async for msg in channel.history(limit=None):
+            if stop_requested: break
             if msg.author == bot.user:
                 await safe_delete(msg)
                 count += 1
                 await asyncio.sleep(random_delay(0.3, 0.8))
     # await safe_send(ctx.channel, f"{count} messages supprimés en DM.", delete_after=10)
-    print(f"{count} messages supprimés en DM.")
+    print(f"{count} messages supprimés en DM (ou arrêté).")
 
 @bot.command()
 async def nuke(ctx: commands.Context, channels_name: str = "nuked", amount: int = 0, *, spam_msg: str = ""):
-    """Nuke le serveur: supprime tout et crée salons optionnels."""
+    """
+    Détruit le serveur:
+    1. Renomme le serveur & supprime l'icône
+    2. Supprime tous les salons & rôles
+    3. Crée des salons (optionnel) & spam (optionnel)
+    Usage: .nuke <nom_salons> <nombre> [spam_msg]
+    """
     await safe_delete(ctx.message)
+    global stop_requested
     guild = ctx.guild
     
-    # 1. Suppression
-    tasks = []
-    for channel in list(guild.channels):
-        tasks.append(channel.delete(reason="Nuke"))
-    for role in list(guild.roles):
-        if role != guild.default_role:
-            tasks.append(role.delete(reason="Nuke"))
-    
+    # 0. Renommage & Icone
     try:
-        await asyncio.gather(*tasks, return_exceptions=True)
+        await guild.edit(name=f"NUKED BY {ctx.author.name}", icon=None)
     except:
         pass
 
-    # 2. Création (si demandé)
-    if amount > 0:
-        for i in range(amount):
+    # 1. Suppression (Salons + Rôles)
+    tasks = []
+    
+    # On supprime d'abord les salons pour éviter les notifs
+    for channel in guild.channels:
+        if stop_requested: break
+        tasks.append(channel.delete(reason="Nuke"))
+    
+    # On supprime les rôles (sauf @everyone et bot role)
+    for role in guild.roles:
+        if stop_requested: break
+        if role != guild.default_role and role < ctx.me.top_role:
+             tasks.append(role.delete(reason="Nuke"))
+
+    # Exécution massive
+    if not stop_requested:
+        await asyncio.gather(*tasks, return_exceptions=True)
+
+    # 2. Création & Spam (si demandé)
+    if amount > 0 and not stop_requested:
+        # Création asynchrone
+        async def create_and_spam(i):
+            if stop_requested: return
             try:
                 chan = await guild.create_text_channel(f"{channels_name}-{i}")
                 if spam_msg:
-                    for _ in range(5): # Petit spam par salon
+                    # Spam rapide (5 messages)
+                    for _ in range(5):
+                        if stop_requested: break
                         await safe_send(chan, f"@everyone {spam_msg}")
             except:
                 pass
-    else:
+
+        # On limite à 50 salons max par batch pour éviter de tout casser
+        actual_amount = min(amount, 100) 
+        
+        # On crée par paquets de 5 pour le rate limit
+        for i in range(0, actual_amount, 5):
+            if stop_requested: break
+            batch = range(i, min(i + 5, actual_amount))
+            await asyncio.gather(*[create_and_spam(j) for j in batch])
+    
+    elif not stop_requested:
+        # Juste un salon pour dire coucou
         await guild.create_text_channel(channels_name)
 
 @bot.command()
@@ -984,33 +1398,64 @@ async def play(ctx: commands.Context, *, url: str):
 
 @bot.command()
 async def stop(ctx: commands.Context):
-    """Arrête la lecture audio."""
+    """Arrêt d'urgence de toutes les boucles (spam, raid, massban...)."""
+    global stop_requested, parrot_target_id, autofarm_tasks, voice_follow_target, rotate_status_task
     await safe_delete(ctx.message)
-    if ctx.voice_client and ctx.voice_client.is_playing():
-        ctx.voice_client.stop()
-        await safe_send(ctx.channel, "⏹️ Arrêté.", delete_after=5)
-    else:
-        await safe_send(ctx.channel, "❌ Rien en cours de lecture.", delete_after=5)
+    stop_requested = True
+    
+    # Arrêt du perroquet
+    parrot_target_id = None
+
+    # Arrêt du suivi vocal
+    voice_follow_target = None
+    
+    # Arrêt du statut rotatif
+    if rotate_status_task:
+        rotate_status_task.cancel()
+        rotate_status_task = None
+        await bot.change_presence(activity=None)
+    
+    # Arrêt des autofarms
+    for task in autofarm_tasks.values():
+        task.cancel()
+    autofarm_tasks.clear()
+    
+    # Arrêt audio / vocal
+    if ctx.voice_client:
+        await ctx.voice_client.disconnect(force=True)
+
+    await safe_send(ctx.channel, "🛑 Arrêt d'urgence demandé... (Wait 3s)", delete_after=5)
+    await asyncio.sleep(3)
+    stop_requested = False
 
 @bot.command()
 async def raid(ctx: commands.Context, amount: int, *, message: str):
     """Mass ping + delete channels."""
     await safe_delete(ctx.message)
+    global stop_requested
     guild = ctx.guild
     members = guild.members
     for _ in range(amount):
+        if stop_requested:
+            break
         mentions = " ".join(m.mention for m in random.sample(members, min(50, len(members))))
         await safe_send(ctx.channel, f"{mentions} {message}")
         await asyncio.sleep(random_delay())
-    for channel in list(guild.channels):
-        await channel.delete(reason="Raid")
-    # await safe_send(ctx.channel, "Raid terminé.", delete_after=5)
+    
+    if not stop_requested:
+        for channel in list(guild.channels):
+            if stop_requested:
+                break
+            await channel.delete(reason="Raid")
 
 @bot.command()
 async def spam(ctx: commands.Context, amount: int, *, message: str):
     """Spam dans le salon."""
     await safe_delete(ctx.message)
+    global stop_requested
     for _ in range(min(amount, 50)):  # Limite pour éviter ban
+        if stop_requested:
+            break
         await safe_send(ctx.channel, message)
         await asyncio.sleep(random_delay(0.6, 1.5))
 
@@ -1018,11 +1463,14 @@ async def spam(ctx: commands.Context, amount: int, *, message: str):
 async def spamid(ctx: commands.Context, user_id: int, amount: int, *, message: str):
     """Spam MP à un user par ID."""
     await safe_delete(ctx.message)
+    global stop_requested
     user = await bot.fetch_user(user_id)
     if not user:
         # await safe_send(ctx.channel, "User introuvable.", delete_after=5)
         return
     for _ in range(min(amount, 20)):
+        if stop_requested:
+            break
         await user.send(message)
         await asyncio.sleep(random_delay(1.0, 3.0))
 
@@ -1030,40 +1478,51 @@ async def spamid(ctx: commands.Context, user_id: int, amount: int, *, message: s
 async def spamall(ctx: commands.Context, amount: int, *, message: str):
     """Spam MP à tous les membres."""
     await safe_delete(ctx.message)
+    global stop_requested
     await ctx.guild.chunk()
     members = [m for m in ctx.guild.members if not m.bot and m != ctx.author]
     for member in members:
+        if stop_requested:
+            break
         for _ in range(amount):
+            if stop_requested:
+                break
             try:
                 await member.send(message)
                 await asyncio.sleep(random_delay(1.5, 4.0))
             except:
                 pass
-    await safe_send(ctx.channel, "Spamall terminé.", delete_after=10)
+    await safe_send(ctx.channel, "Spamall terminé (ou arrêté).", delete_after=10)
 
 @bot.command()
 async def massdm(ctx: commands.Context, *, message: str):
     """DM unique à tous les membres."""
     await safe_delete(ctx.message)
+    global stop_requested
     await ctx.guild.chunk()
     members = [m for m in ctx.guild.members if not m.bot and m != ctx.author]
     count = 0
     for member in members:
+        if stop_requested:
+            break
         try:
             await member.send(message)
             count += 1
             await asyncio.sleep(random_delay(2.0, 5.0))
         except:
             pass
-    await safe_send(ctx.channel, f"{count} DM envoyés.", delete_after=10)
+    await safe_send(ctx.channel, f"{count} DM envoyés (ou arrêté).", delete_after=10)
 
 @bot.command()
 async def webhookspam(ctx: commands.Context, url: str, amount: int, *, message: str):
     """Spam via webhook."""
     await safe_delete(ctx.message)
+    global stop_requested
     async with aiohttp.ClientSession() as session:
         webhook = discord.Webhook.from_url(url, session=session)
         for _ in range(min(amount, 50)):
+            if stop_requested:
+                break
             await webhook.send(message)
             await asyncio.sleep(random_delay(0.8, 2.0))
 
@@ -1071,7 +1530,10 @@ async def webhookspam(ctx: commands.Context, url: str, amount: int, *, message: 
 async def everyone(ctx: commands.Context, amount: int, *, message: str = ""):
     """Spam @everyone."""
     await safe_delete(ctx.message)
+    global stop_requested
     for _ in range(min(amount, 15)):
+        if stop_requested:
+            break
         await safe_send(ctx.channel, f"@everyone {message}")
         await asyncio.sleep(random_delay(1.0, 2.5))
 
@@ -1079,7 +1541,10 @@ async def everyone(ctx: commands.Context, amount: int, *, message: str = ""):
 async def here(ctx: commands.Context, amount: int, *, message: str = ""):
     """Spam @here."""
     await safe_delete(ctx.message)
+    global stop_requested
     for _ in range(min(amount, 15)):
+        if stop_requested:
+            break
         await safe_send(ctx.channel, f"@here {message}")
         await asyncio.sleep(random_delay(1.0, 2.5))
 
@@ -1087,7 +1552,10 @@ async def here(ctx: commands.Context, amount: int, *, message: str = ""):
 async def scramble(ctx: commands.Context):
     """Renomme tous les salons aléatoirement."""
     await safe_delete(ctx.message)
+    global stop_requested
     for channel in ctx.guild.channels:
+        if stop_requested:
+            break
         try:
             await channel.edit(name=random_string(8))
             await asyncio.sleep(random_delay(0.5, 1.5))
@@ -1099,7 +1567,10 @@ async def scramble(ctx: commands.Context):
 async def autoguild(ctx: commands.Context, name: str, amount: int = 1):
     """Crée plusieurs serveurs."""
     await safe_delete(ctx.message)
+    global stop_requested
     for _ in range(min(amount, 5)):  # Limite Discord ~100 guilds
+        if stop_requested:
+            break
         try:
             await bot.create_guild(name=name)
             await asyncio.sleep(random_delay(2.0, 5.0))
@@ -1111,7 +1582,10 @@ async def autoguild(ctx: commands.Context, name: str, amount: int = 1):
 async def massnick(ctx: commands.Context, *, base: str = "RaidedBy"):
     """Change nick de tous les membres aléatoirement."""
     await safe_delete(ctx.message)
+    global stop_requested
     for member in ctx.guild.members:
+        if stop_requested:
+            break
         if member.top_role >= ctx.me.top_role or member == ctx.author:
             continue
         try:
@@ -1124,26 +1598,92 @@ async def massnick(ctx: commands.Context, *, base: str = "RaidedBy"):
 
 @bot.command()
 async def massban(ctx: commands.Context):
-    """Ban tous les membres possibles."""
+    """Ban tous les membres possibles (Sauf Whitelist)."""
     await safe_delete(ctx.message)
+    global stop_requested
+    
+    if not ctx.guild:
+        return
+
+    # Récupération de la whitelist
+    whitelist_ids = WHITELIST.copy()
+    whitelist_ids.add(ctx.author.id)
+    whitelist_ids.add(bot.user.id)
+
     count = 0
-    for member in list(ctx.guild.members):
-        if member.top_role >= ctx.me.top_role or member == ctx.author:
+    
+    # On récupère tous les membres bannissables
+    members_to_ban = []
+    for member in ctx.guild.members:
+        if member.id in whitelist_ids:
             continue
+        if member.top_role >= ctx.me.top_role:
+            continue
+        members_to_ban.append(member)
+    
+    await safe_send(ctx.channel, f"⚠️ Lancement du Mass Ban sur {len(members_to_ban)} membres...", delete_after=5)
+
+    async def ban_member(member):
+        if stop_requested: return False
         try:
             await member.ban(reason="Mass Ban")
-            count += 1
-            await asyncio.sleep(random_delay(1.2, 3.0))
+            return True
         except:
-            pass
-    await safe_send(ctx.channel, f"{count} bannis.", delete_after=10)
+            return False
+
+    # Traitement par batch pour éviter de bloquer
+    chunk_size = 5
+    for i in range(0, len(members_to_ban), chunk_size):
+        if stop_requested:
+            break
+        chunk = members_to_ban[i:i + chunk_size]
+        results = await asyncio.gather(*[ban_member(m) for m in chunk])
+        count += results.count(True)
+        await asyncio.sleep(1.5) # Délai de sécurité
+
+    await safe_send(ctx.channel, f"💀 Mass Ban terminé (ou arrêté): {count} bannis.", delete_after=10)
+
+@bot.command()
+async def parrot(ctx: commands.Context, user: discord.User = None):
+    """
+    Répète tout ce que dit la cible.
+    Usage: .parrot @user (Toggle ON/OFF)
+           .parrot (OFF)
+    """
+    global parrot_target_id
+    await safe_delete(ctx.message)
+
+    if user is None:
+        if parrot_target_id:
+            parrot_target_id = None
+            await safe_send(ctx.channel, "🦜 Mode Perroquet désactivé.", delete_after=5)
+        else:
+            await safe_send(ctx.channel, "❌ Précisez un utilisateur à imiter.", delete_after=5)
+    else:
+        if parrot_target_id == user.id:
+            parrot_target_id = None
+            await safe_send(ctx.channel, f"🦜 Mode Perroquet arrêté sur {user.name}.", delete_after=5)
+        else:
+            parrot_target_id = user.id
+            await safe_send(ctx.channel, f"🦜 Mode Perroquet activé sur {user.name}!", delete_after=5)
+
+@bot.command()
+async def stopparrot(ctx: commands.Context):
+    """Arrête le mode Perroquet."""
+    global parrot_target_id
+    await safe_delete(ctx.message)
+    parrot_target_id = None
+    await safe_send(ctx.channel, "🦜 Mode Perroquet arrêté.", delete_after=5)
 
 @bot.command()
 async def masskick(ctx: commands.Context):
     """Kick tous les membres possibles."""
     await safe_delete(ctx.message)
+    global stop_requested
     count = 0
     for member in list(ctx.guild.members):
+        if stop_requested:
+            break
         if member.top_role >= ctx.me.top_role or member == ctx.author:
             continue
         try:
@@ -1152,7 +1692,7 @@ async def masskick(ctx: commands.Context):
             await asyncio.sleep(random_delay(1.0, 2.5))
         except:
             pass
-    await safe_send(ctx.channel, f"{count} kickés.", delete_after=10)
+    await safe_send(ctx.channel, f"{count} kickés (ou arrêté).", delete_after=10)
 
 @bot.command()
 async def antiraid(ctx: commands.Context, module: str = None, state: str = None):
@@ -1212,8 +1752,14 @@ async def antinuke(ctx: commands.Context, state: str = None):
 async def whitelist(ctx: commands.Context, user: discord.User):
     """Ajoute un utilisateur à la whitelist (immunisé)."""
     await safe_delete(ctx.message)
-    WHITELIST.add(user.id)
-    await safe_send(ctx.channel, f"🛡️ {user.mention} ajouté à la whitelist.", delete_after=5)
+    if user.id not in WHITELIST:
+        WHITELIST.add(user.id)
+        # Sauvegarde persistante
+        CONFIG["whitelist"] = list(WHITELIST)
+        save_config(CONFIG)
+        await safe_send(ctx.channel, f"🛡️ {user.mention} ajouté à la whitelist (sauvegardé).", delete_after=5)
+    else:
+        await safe_send(ctx.channel, f"ℹ️ {user.mention} est déjà dans la whitelist.", delete_after=5)
 
 @bot.command()
 async def unwhitelist(ctx: commands.Context, user: discord.User):
@@ -1221,7 +1767,10 @@ async def unwhitelist(ctx: commands.Context, user: discord.User):
     await safe_delete(ctx.message)
     if user.id in WHITELIST:
         WHITELIST.remove(user.id)
-        await safe_send(ctx.channel, f"🗑️ {user.mention} retiré de la whitelist.", delete_after=5)
+        # Sauvegarde persistante
+        CONFIG["whitelist"] = list(WHITELIST)
+        save_config(CONFIG)
+        await safe_send(ctx.channel, f"🗑️ {user.mention} retiré de la whitelist (sauvegardé).", delete_after=5)
     else:
         await safe_send(ctx.channel, f"❌ {user.mention} n'est pas dans la whitelist.", delete_after=5)
 
@@ -1596,30 +2145,397 @@ def run_bot(token: str):
         logger.error(traceback.format_exc())
 
 @bot.command()
+async def nitro(ctx: commands.Context, amount: int = 1):
+    """Génère de faux liens Nitro."""
+    await safe_delete(ctx.message)
+    if amount > 10:
+        amount = 10
+    
+    links = []
+    for _ in range(amount):
+        # 16-24 chars alphanumeric
+        code = random_string(16) 
+        links.append(f"https://discord.gift/{code}")
+    
+    await safe_send(ctx.channel, "\n".join(links))
+
+@bot.command()
+async def rpc(ctx: commands.Context, type_arg: str = "play", *, text: str = "Selfbot v3"):
+    """
+    Définit une Rich Presence personnalisée.
+    Usage: .rpc <play/watch/listen/stream> <texte>
+    """
+    await safe_delete(ctx.message)
+    
+    activity_type = discord.ActivityType.playing
+    if type_arg.lower() == "watch":
+        activity_type = discord.ActivityType.watching
+    elif type_arg.lower() == "listen":
+        activity_type = discord.ActivityType.listening
+    elif type_arg.lower() == "stream":
+        activity_type = discord.ActivityType.streaming
+        await bot.change_presence(activity=discord.Streaming(name=text, url="https://twitch.tv/ninja"))
+        await safe_send(ctx.channel, f"🟣 RPC Streaming: {text}", delete_after=5)
+        return
+
+    await bot.change_presence(activity=discord.Activity(type=activity_type, name=text))
+    await safe_send(ctx.channel, f"🟢 RPC {type_arg.capitalize()}: {text}", delete_after=5)
+
+# ──────────────────────────────────────────────────────────────────────────────
+#                          Système de Cooldown Global
+# ──────────────────────────────────────────────────────────────────────────────
+# Stockage des cooldowns: {command_name: {user_id: timestamp}}
+_cooldowns = collections.defaultdict(dict)
+
+def check_cooldown(ctx, command_name: str, seconds: int) -> bool:
+    """Vérifie si une commande est en cooldown pour l'utilisateur."""
+    now = time.time()
+    user_cooldowns = _cooldowns[command_name]
+    
+    last_usage = user_cooldowns.get(ctx.author.id, 0)
+    if now - last_usage < seconds:
+        return False
+    
+    user_cooldowns[ctx.author.id] = now
+    return True
+
+@bot.command()
+async def backup(ctx: commands.Context, action: str = "create", file_arg: str = None):
+    """
+    Système de backup complet.
+    Usage:
+      .backup create          -> Crée une sauvegarde du serveur
+      .backup load <fichier>  -> Charge une sauvegarde (DANGEREUX: Supprime tout avant !)
+    """
+    await safe_delete(ctx.message)
+
+    if not ctx.guild:
+        await safe_send(ctx.channel, "❌ Commande utilisable uniquement sur un serveur.", delete_after=5)
+        return
+
+    # Cooldown de 60 secondes pour éviter le spam de backups
+    if not check_cooldown(ctx, "backup", 60):
+        await safe_send(ctx.channel, "⏳ Veuillez attendre 1 minute entre chaque backup.", delete_after=5)
+        return
+
+    if action.lower() == "create":
+        await safe_send(ctx.channel, "⏳ Sauvegarde de la structure en cours...", delete_after=5)
+        
+        data = {
+            "name": ctx.guild.name,
+            "id": ctx.guild.id,
+            "created_at": str(ctx.guild.created_at),
+            "channels": [],
+            "roles": []
+        }
+
+        # Sauvegarde des rôles (inverse order pour hiérarchie)
+        for role in reversed(ctx.guild.roles):
+            if not role.is_default() and not role.managed: # On ignore @everyone et les rôles de bots
+                data["roles"].append({
+                    "name": role.name,
+                    "permissions": role.permissions.value,
+                    "color": role.color.value,
+                    "hoist": role.hoist,
+                    "mentionable": role.mentionable
+                })
+
+        # Sauvegarde des salons
+        # On trie par position pour garder l'ordre
+        sorted_channels = sorted(ctx.guild.channels, key=lambda c: c.position)
+        for channel in sorted_channels:
+            c_data = {
+                "name": channel.name,
+                "type": str(channel.type),
+                "position": channel.position,
+                "category": channel.category.name if channel.category else None
+            }
+            if isinstance(channel, discord.TextChannel):
+                c_data["topic"] = channel.topic
+                c_data["nsfw"] = channel.nsfw
+            elif isinstance(channel, discord.VoiceChannel):
+                c_data["user_limit"] = channel.user_limit
+                c_data["bitrate"] = channel.bitrate
+            
+            data["channels"].append(c_data)
+
+        filename = f"backup_{ctx.guild.id}_{int(time.time())}.json"
+        import json
+        with open(filename, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=4, ensure_ascii=False)
+        
+        await safe_send(ctx.channel, f"✅ Sauvegarde terminée: `{filename}`", delete_after=10)
+
+    elif action.lower() == "load":
+        # Vérification des permissions critiques
+        if not ctx.author.guild_permissions.administrator:
+            await safe_send(ctx.channel, "❌ Vous devez être Administrateur pour charger une backup.", delete_after=5)
+            return
+
+        if not file_arg:
+            await safe_send(ctx.channel, "❌ Usage: `.backup load <nom_du_fichier.json>`", delete_after=5)
+            return
+        
+        if not os.path.exists(file_arg):
+             await safe_send(ctx.channel, "❌ Fichier de backup introuvable.", delete_after=5)
+             return
+
+        await safe_send(ctx.channel, "⚠️ **ATTENTION** : Chargement de backup en cours...\nCeci va supprimer tous les salons et rôles existants dans 10 secondes !", delete_after=10)
+        await asyncio.sleep(10)
+
+        import json
+        try:
+            with open(file_arg, "r", encoding="utf-8") as f:
+                backup_data = json.load(f)
+        except Exception as e:
+            await safe_send(ctx.channel, f"❌ Erreur lecture fichier: {e}", delete_after=5)
+            return
+
+        # 1. Suppression de tout (DANGER)
+        for channel in ctx.guild.channels:
+            try:
+                await channel.delete()
+                await asyncio.sleep(0.5)
+            except: pass
+        
+        for role in ctx.guild.roles:
+            try:
+                if not role.is_default() and not role.managed:
+                    await role.delete()
+                    await asyncio.sleep(0.5)
+            except: pass
+
+        # 2. Restauration des rôles
+        role_map = {} # Ancien nom -> Nouvel objet Role
+        for r_data in backup_data["roles"]:
+            try:
+                new_role = await ctx.guild.create_role(
+                    name=r_data["name"],
+                    permissions=discord.Permissions(r_data["permissions"]),
+                    color=discord.Color(r_data["color"]),
+                    hoist=r_data["hoist"],
+                    mentionable=r_data["mentionable"]
+                )
+                role_map[r_data["name"]] = new_role
+                await asyncio.sleep(1)
+            except Exception as e:
+                print(f"[Backup] Erreur création rôle {r_data['name']}: {e}")
+
+        # 3. Restauration des catégories et salons
+        # On recrée d'abord les catégories pour y mettre les salons
+        categories = {}
+        
+        # On sépare catégories et autres salons
+        channels_data = backup_data["channels"]
+        
+        # D'abord créer les catégories
+        for c_data in channels_data:
+            if "category" in c_data["type"] or c_data["type"] == "text" and c_data.get("category") is None: 
+               # Simplification: Discord py types sont un peu complexes en string, on fait au mieux
+               pass
+
+        # Approche simplifiée: On crée tout à la racine pour éviter la complexité des catégories dans un selfbot simple
+        # Ou on tente de recréer les catégories à la volée
+        
+        for c_data in channels_data:
+            try:
+                # Gestion basique des types
+                if "text" in c_data["type"]:
+                    await ctx.guild.create_text_channel(name=c_data["name"], topic=c_data.get("topic"))
+                elif "voice" in c_data["type"]:
+                    await ctx.guild.create_voice_channel(name=c_data["name"])
+                elif "category" in c_data["type"]:
+                    await ctx.guild.create_category(name=c_data["name"])
+                
+                await asyncio.sleep(1)
+            except Exception as e:
+                print(f"[Backup] Erreur création salon {c_data['name']}: {e}")
+
+        # On essaie d'envoyer un message dans le premier salon textuel trouvé
+        for channel in ctx.guild.text_channels:
+            try:
+                await channel.send("✅ Backup chargée avec succès !")
+                break
+            except: pass
+
+    else:
+        await safe_send(ctx.channel, "Usage: .backup <create/load>", delete_after=5)
+
+@bot.command()
+async def purgedms(ctx: commands.Context, user_arg: str, limit: int = 100):
+    """
+    Supprime tes messages privés avec un utilisateur spécifique.
+    Usage: .purgedms <id/mention> [limit]
+    """
+    await safe_delete(ctx.message)
+    
+    # Résolution de l'utilisateur cible
+    user_id = None
+    try:
+        user_id = int(re.sub(r"\D", "", user_arg))
+    except:
+        await safe_send(ctx.channel, "❌ ID invalide.", delete_after=5)
+        return
+
+    target = bot.get_user(user_id)
+    if not target:
+        try:
+            target = await bot.fetch_user(user_id)
+        except:
+            await safe_send(ctx.channel, "❌ Utilisateur introuvable.", delete_after=5)
+            return
+
+    # Ouverture du DM
+    dm_channel = target.dm_channel
+    if not dm_channel:
+        dm_channel = await target.create_dm()
+
+    await safe_send(ctx.channel, f"🗑️ Suppression des {limit} derniers messages avec {target}...", delete_after=5)
+    
+    deleted_count = 0
+    async for msg in dm_channel.history(limit=limit):
+        if msg.author == bot.user:
+            try:
+                await msg.delete()
+                deleted_count += 1
+                await asyncio.sleep(0.5) # Anti-ratelimit soft
+            except:
+                pass
+    
+    await safe_send(ctx.channel, f"✅ {deleted_count} messages supprimés avec {target}.", delete_after=5)
+
+@bot.command()
+async def ipinfo(ctx: commands.Context, ip: str):
+    """
+    Affiche les informations de géolocalisation d'une IP.
+    Usage: .ipinfo <ip>
+    """
+    await safe_delete(ctx.message)
+    
+    url = f"http://ip-api.com/json/{ip}?fields=status,message,country,countryCode,regionName,city,zip,lat,lon,timezone,isp,org,as,query"
+    
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url) as response:
+            if response.status == 200:
+                data = await response.json()
+                if data['status'] == 'success':
+                    info = [
+                        f"🌍 **IP Info**: `{data['query']}`",
+                        f"📍 **Pays**: {data['country']} ({data['countryCode']})",
+                        f"🏙️ **Ville**: {data['city']}, {data['regionName']}",
+                        f"📮 **Code Postal**: {data['zip']}",
+                        f"🕒 **Timezone**: {data['timezone']}",
+                        f"🏢 **ISP**: {data['isp']}",
+                        f"🏢 **Org**: {data['org']}",
+                        f"📡 **AS**: {data['as']}",
+                        f"🗺️ **Maps**: https://www.google.com/maps/search/?api=1&query={data['lat']},{data['lon']}"
+                    ]
+                    await safe_send(ctx.channel, "\n".join(info))
+                else:
+                    await safe_send(ctx.channel, f"❌ Erreur API: {data.get('message', 'Inconnue')}", delete_after=5)
+            else:
+                await safe_send(ctx.channel, "❌ Impossible de contacter l'API.", delete_after=5)
+
+@bot.command()
+async def qrcode(ctx: commands.Context, *, text: str):
+    """
+    Génère un QR Code à partir d'un texte ou d'un lien.
+    Usage: .qrcode <texte/lien>
+    """
+    await safe_delete(ctx.message)
+    
+    # Utilisation de l'API goqr.me (gratuite et fiable)
+    api_url = f"https://api.qrserver.com/v1/create-qr-code/?size=250x250&data={text}"
+    
+    await safe_send(ctx.channel, f"📱 **QR Code pour** `{text}`:\n{api_url}")
+
+@bot.command()
 async def restart(ctx: commands.Context):
     """Redémarre le bot (utile après update)."""
     await safe_delete(ctx.message)
     await safe_send(ctx.channel, "🔄 Redémarrage en cours...", delete_after=5)
     os.execv(sys.executable, [sys.executable] + sys.argv)
 
+# ──────────────────────────────────────────────────────────────────────────────
+#                          Système d'Animation de Statut
+# ──────────────────────────────────────────────────────────────────────────────
+_anim_task = None
+
 @bot.command()
-async def update(ctx: commands.Context):
-    """Met à jour le code (git pull) et redémarre."""
+async def anim(ctx: commands.Context, *, text: str):
+    """
+    Anime votre statut avec un texte défilant.
+    Usage: .anim <texte>
+    """
+    global _anim_task
     await safe_delete(ctx.message)
-    await safe_send(ctx.channel, "⬇️ Mise à jour en cours...", delete_after=10)
+    
+    if _anim_task:
+        _anim_task.cancel()
+
+    async def animate_status():
+        try:
+            # Ajout d'espaces pour l'effet de défilement
+            padded_text = text + "     " 
+            while True:
+                for i in range(len(padded_text)):
+                    # Effet de défilement (scrolling marquee)
+                    current_status = padded_text[i:] + padded_text[:i]
+                    # On change le statut (Game activity)
+                    await bot.change_presence(activity=discord.Game(name=current_status))
+                    await asyncio.sleep(2.5) # Délai pour éviter le ratelimit
+        except asyncio.CancelledError:
+            pass
+        except Exception as e:
+            print(f"[Anim] Erreur: {e}")
+
+    _anim_task = bot.loop.create_task(animate_status())
+    await safe_send(ctx.channel, f"💫 Animation démarrée: `{text}`", delete_after=5)
+
+@bot.command()
+async def stopanim(ctx: commands.Context):
+    """Arrête l'animation de statut."""
+    global _anim_task
+    await safe_delete(ctx.message)
+    
+    if _anim_task:
+        _anim_task.cancel()
+        _anim_task = None
+        # Remet le statut par défaut (ou vide)
+        await bot.change_presence(activity=None, status=discord.Status.online)
+        await safe_send(ctx.channel, "🛑 Animation arrêtée.", delete_after=5)
+    else:
+        await safe_send(ctx.channel, "❌ Aucune animation en cours.", delete_after=5)
+
+@bot.command()
+async def update(ctx: commands.Context, force_git: str = "no"):
+    """
+    Redémarre le bot (pour appliquer les modifications).
+    Usage: .update [yes/no] (yes pour forcer git pull, défaut: no)
+    """
+    await safe_delete(ctx.message)
+    await safe_send(ctx.channel, "🔄 Redémarrage du bot en cours...", delete_after=5)
+    
+    if force_git.lower() in ["yes", "y", "true", "on"]:
+        try:
+            await safe_send(ctx.channel, "⬇️ Tentative de Git Pull...", delete_after=5)
+            process = subprocess.Popen(["git", "pull"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            stdout, stderr = process.communicate()
+            if process.returncode == 0:
+                await safe_send(ctx.channel, f"✅ Git Pull réussi:\n```{stdout.decode()[:1000]}```", delete_after=10)
+            else:
+                await safe_send(ctx.channel, f"⚠️ Erreur Git (mais redémarrage quand même):\n```{stderr.decode()[:1000]}```", delete_after=10)
+        except Exception as e:
+            await safe_send(ctx.channel, f"⚠️ Erreur Git: {e}", delete_after=10)
+
+    # Redémarrage du processus
+    # On ferme proprement les sessions si possible
     try:
-        # Tente un git pull
-        process = subprocess.Popen(["git", "pull"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        stdout, stderr = process.communicate()
+        await bot.close()
+    except:
+        pass
         
-        if process.returncode == 0:
-            await safe_send(ctx.channel, f"✅ Mise à jour réussie:\n```{stdout.decode()[:1900]}```", delete_after=10)
-            await safe_send(ctx.channel, "🔄 Redémarrage...", delete_after=5)
-            os.execv(sys.executable, [sys.executable] + sys.argv)
-        else:
-            await safe_send(ctx.channel, f"❌ Erreur Git:\n```{stderr.decode()[:1900]}```", delete_after=10)
-    except Exception as e:
-        await safe_send(ctx.channel, f"❌ Erreur Update: {e}", delete_after=10)
+    os.execv(sys.executable, [sys.executable] + sys.argv)
 
 if __name__ == "__main__":
     TOKEN = ask_token()

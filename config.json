@@ -1,0 +1,6 @@
+{
+    "prefix": ".",
+    "auto_delete_commands": true,
+    "rotate_status_delay": 5,
+    "autofarm_delay": 60
+}
