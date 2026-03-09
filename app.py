@@ -2,11 +2,26 @@ from flask import Flask, render_template, request, session, redirect, url_for
 from flask_session import Session
 import os
 import selfbot
+import bot_manager
 
+# Configuration Flask
 app = Flask(__name__)
 app.secret_key = os.urandom(24)
 app.config["SESSION_TYPE"] = "filesystem"
 Session(app)
+
+print("✅ Flask App starting...")
+
+# Démarrer le Bot Manager Discord en background (si token présent)
+# Cela permet d'avoir le bot officiel qui répond à !panel
+try:
+    if os.getenv("MANAGER_TOKEN"):
+        print("🚀 Démarrage du Bot Manager...")
+        bot_manager.start_manager()
+    else:
+        print("⚠️ MANAGER_TOKEN non défini. Le bot manager ne démarrera pas.")
+except Exception as e:
+    print(f"❌ Erreur démarrage Bot Manager: {e}")
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
